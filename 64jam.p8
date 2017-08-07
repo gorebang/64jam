@@ -36,7 +36,7 @@ function init_entities()
 end
 
 function set_player_dir_from_buttons()
-	newdir = 0
+	local newdir = 0
 	if btn (1) and btn (2) then
 		newdir = 1
 	elseif btn (1) and btn (3) then
@@ -59,13 +59,15 @@ function set_player_dir_from_buttons()
 			newdir = 6
 		end
 	end
-	if newdir ~= 0 then  -- ~= is lua's "not equal"
+
+	if newdir == 0 then  
+		player.moving = false
+	else
 		player.dir = newdir
 		player.moving = true
-	else
-		player.moving = false
 	end
 end
+
 function update_player()
 	if started then player.fuel -= 1 end
 	if player.moving then
@@ -98,6 +100,9 @@ function _update()
 end
 
 function update_projectiles()
+	-- todo, combine projectiles arrays
+	-- todo, track projectile fuel, instead of using distance from player
+
 	for b in all(bullets) do
 		b.x += b.dx
 		b.y += b.dy
@@ -192,6 +197,7 @@ end
 function draw_projectiles()
 	for r in all(rockets) do
 		local s = 112
+		-- todo - standardise sprite layout, write "draw_sprite(ti, x, y, dir)"
 		if (r.dir == 12) then spr(115,r.x,r.y,1,1,false,true) end
 		if (r.dir == 1) then spr(114,r.x,r.y,1,1,false,true)  end
 		if (r.dir == 3) then spr(113,r.x, r.y) end
