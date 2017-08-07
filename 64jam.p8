@@ -245,8 +245,7 @@ function _draw()
 
 end
 
-s = 67
-s2 = 83
+rotor_offset = 0
 
 function drawcopter(x,y)
 	if player.dir == 12 then 
@@ -275,22 +274,34 @@ function drawcopter(x,y)
 		spr(97,x,y,1,1,true,false)
 	end
 	
+
+
+
+	--
+	-- rotor drawing code
+	--
+
+	TI_ROTOR_TOP = 67  -- TI - Tile Index
+	TI_ROTOR_SIDE = 83
+
+	local ti_rotor
+
+	-- pick a base rotor tile based on player direction
 	if player.dir == 3 or player.dir == 9 then
-		spr (s2,x,y) --rotor
+		ti_rotor = TI_ROTOR_SIDE
 	else
-		spr (s,x,y) --rotor
+		ti_rotor = TI_ROTOR_TOP
 	end
+
+	spr(ti_rotor + rotor_offset, x, y) --draw rotor
+
 	
-	if started == true then
-		if s == 72 then 
-			s = 67 
-			else s += 1 
+	if started then
+		-- rotate the rotor
+		if rotor_offset == 5 then 
+			rotor_offset = 0 
+			else rotor_offset += 1 
 		end 
-		
-		if s2 == 88 then 
-			s2 = 83 
-			else s2 += 1 
-		end
 	end
 end
 __gfx__
