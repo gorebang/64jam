@@ -15,10 +15,10 @@ pickups={}
 rockets = {}
 bullets = {}
 
-started=false
+started = false
 
 function _init()
- poke(0x5f2c,3)
+ poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
  cls()
  --init_entities()
 end
@@ -35,9 +35,52 @@ function init_entities()
 	end
 end
 
-function _update()
-m = false --to stop double move
+function set_player_dir_from_buttons()
+	local newdir = 0
+	if btn (1) and btn (2) then
+		newdir = 1
+	elseif btn (1) and btn (3) then
+		newdir = 5
+	elseif btn (0) and btn (2) then
+		newdir = 10
+	elseif btn (0) and btn (3) then
+		newdir = 7
+	else
+		if btn(0) then 
+			newdir = 9
+		end
+		if btn(1) then 
+			newdir = 3 
+		end
+		if btn(2) then 
+			newdir = 12
+		end
+		if btn(3) then 
+			newdir = 6
+		end
+	end
 
+	if newdir == 0 then  
+		player.moving = false
+	else
+		player.dir = newdir
+		player.moving = true
+	end
+end
+
+function update_player()
+	if started then player.fuel -= 1 end
+	if player.moving then
+		local dx
+		local dy 
+		local speed = 1
+		dx, dy = dir_to_deltas(player.dir, speed)
+		player.x += dx
+		player.y += dy
+	end
+end
+
+function _update()
 	if started == true then
 		sfx (1)	
 	end
@@ -47,57 +90,19 @@ m = false --to stop double move
 		started = true
 	end
 
-if btn (1) and btn (2) then 
-		player.dir = 1
-		player.x += 1
-		player.y -= 1
-		m = true
-	end
-	if btn (1) and btn (3) then 
-		player.dir = 5
-		player.x += 1
-		player.y += 1
-		m = true 
-	end
-	if btn (0) and btn (2) then 
-		player.dir = 10
-		player.x -= 1
-		player.y -= 1
-		m = true 
-	end
-	if btn (0) and btn (3) then 
-		player.dir = 7
-		player.x -= 1
-		player.y += 1 
-		m = true
-	end
-	if (m== false) then
-		if btn(0) then 
-			player.dir = 9
-			player.x -= 1 
-		end
-		if btn(1) then 
-			player.dir = 3 
-			player.x += 1
-		end
-		if btn(2) then 
-			player.dir = 12
-			player.y -= 1
-	 end
-		if btn(3) then 
-			player.dir = 6
-			player.y += 1 
-		end
-	end
-	
+	set_player_dir_from_buttons()
+
+	update_player()
 	update_projectiles()
-	if started then player.fuel -= 1 end
 	
 	if btn(5) then fire_bullet() end
- if btnp(4) then fire_rocket() end
+	if btnp(4) then fire_rocket() end
 end
 
 function update_projectiles()
+	-- todo, combine projectiles arrays
+	-- todo, track projectile fuel, instead of using distance from player
+
 	for b in all(bullets) do
 		b.x += b.dx
 		b.y += b.dy
@@ -126,35 +131,52 @@ function update_projectiles()
 	end
 end
 
-function fire_rocket()
-	if (player.rockets > 0) then
-		local x = 0
-		local y = 0
+-- converts a direction and speed to a dx, dy
+function dir_to_deltas(dir, speed)
+	local dx = 0
+	local dy = 0
+
+	if dir == 12 or dir == 10 or dir == 1 then
+		dy = -speed
+	end
+	
+	if dir == 5 or dir == 6 or dir == 7 then
+		dy = speed
+	end
+	 
+	if dir >= 1 and dir < 6 then
+		dx = speed
+	end
+	if dir > 6 and dir <= 10 then
+		dx = -speed
+	end 
+	return dx, dy
+end
+
+function create_projectile(speed)
+		local dx
+		local dy
 		local speed = 6
-		sfx(2)
 		
-		if player.dir == 12 or player.dir == 10 or player.dir == 1 then
-			y = -speed
-		end
-		
-		if player.dir == 5 or player.dir == 6 or player.dir == 7 then
-		y = speed
-		end
-		 
-		if player.dir >= 1 and player.dir < 6 then
-			x = speed
-		end
-		if player.dir > 6 and player.dir <= 10 then
-			x = -speed
-		end 
-		 
-		local r={
-			sp = 3,
+		dx, dy = dir_to_deltas(player.dir, speed)
+
+		local r= {
 			x = player.x,
 			y = player.y,
-			dx = x,
-			dy = y
+			dir = player.dir,
+			dx = dx,
+			dy = dy
 		}
+		return r
+end
+
+function fire_rocket()
+	if (player.rockets > 0) then
+		sfx(2)
+
+		local speed = 6
+		local r = create_projectile(speed)
+
 		add(rockets, r)
 		player.rockets -=1
 	end
@@ -162,30 +184,11 @@ end
 
 function fire_bullet()
 	if (player.bullets > 0) then
-		local x = 0
-		local y = 0
-		local speed = 4
 		sfx (0)
-		if player.dir == 12 or player.dir == 10 or player.dir == 1 then
-			y = -speed
-		end		
-		if player.dir == 5 or player.dir == 6 or player.dir == 7 then
-		y = speed
-		end
-		if player.dir >= 1 and player.dir < 6 then
-			x = speed
-		end
-		if player.dir > 6 and player.dir <= 10 then
-			x = -speed
-		end
-		 
-		local b={
-			sp = 3,
-			x = player.x,
-			y = player.y,
-			dx = x,
-			dy = y
-		}
+
+		local speed = 4
+		local b = create_projectile(speed)
+
 		add(bullets, b)
 		player.bullets -=1
 	end
@@ -193,15 +196,16 @@ end
 
 function draw_projectiles()
 	for r in all(rockets) do
-	 local s = 112
-	 if (player.dir == 12) then spr(115,r.x,r.y,1,1,false,true) end
-	 if (player.dir == 1) then spr(114,r.x,r.y,1,1,false,true)  end
-	 if (player.dir == 3) then spr(113,r.x, r.y) end
-	 if (player.dir == 5) then spr(114,r.x, r.y) end 
-	 if (player.dir == 6) then spr(115,r.x, r.y) end
-	 if (player.dir == 7) then spr(114,r.x,r.y,1,1,true,false) end
-	 if (player.dir == 9) then spr(113,r.x,r.y,1,1,true,true) end
-	 if (player.dir == 10) then spr(114,r.x,r.y,1,1,true,true) end
+		local s = 112
+		-- todo - standardise sprite layout, write "draw_sprite(ti, x, y, dir)"
+		if (r.dir == 12) then spr(115,r.x,r.y,1,1,false,true) end
+		if (r.dir == 1) then spr(114,r.x,r.y,1,1,false,true)  end
+		if (r.dir == 3) then spr(113,r.x, r.y) end
+		if (r.dir == 5) then spr(114,r.x, r.y) end
+		if (r.dir == 6) then spr(115,r.x, r.y) end
+		if (r.dir == 7) then spr(114,r.x,r.y,1,1,true,false) end
+		if (r.dir == 9) then spr(113,r.x,r.y,1,1,true,true) end
+		if (r.dir == 10) then spr(114,r.x,r.y,1,1,true,true) end
 	end
 	
 	for b in all(bullets) do
@@ -229,7 +233,7 @@ function _draw()
 		print ("low fuel", player.x - 31, player.y - 25, 8)
 	end
 
-	if started == false then
+	if not started then
 		print ("‹ƒ‘” fly", player.x -30, player.y - 30, 7)
 		print ("— machine gun", player.x -30, player.y - 22, 7)
 		print ("Ž rockets", player.x -30, player.y - 14, 7)
@@ -239,14 +243,13 @@ function _draw()
 	
 	if (player.x <= -30 or player.x >= 1040 or player.y <= -30 or player.y >= 540) then
 		print ( "   return to", player.x -30, player.y + 10, 7)
-			print ("  mission area", player.x -30, player.y + 20, 7)
+		print ("  mission area", player.x -30, player.y + 20, 7)
 
 	end
 
 end
 
-s = 67
-s2 = 83
+rotor_offset = 0
 
 function drawcopter(x,y)
 	if player.dir == 12 then 
@@ -271,26 +274,38 @@ function drawcopter(x,y)
 	if player.dir == 7 then 
 		spr(96,x,y,1,1,true,false)
 	end
-		if player.dir == 10 then 
+	if player.dir == 10 then 
 		spr(97,x,y,1,1,true,false)
 	end
 	
+
+
+
+	--
+	-- rotor drawing code
+	--
+
+	TI_ROTOR_TOP = 67  -- TI - Tile Index
+	TI_ROTOR_SIDE = 83
+
+	local ti_rotor
+
+	-- pick a base rotor tile based on player direction
 	if player.dir == 3 or player.dir == 9 then
-		spr (s2,x,y) --rotor
+		ti_rotor = TI_ROTOR_SIDE
 	else
-		spr (s,x,y) --rotor
+		ti_rotor = TI_ROTOR_TOP
 	end
+
+	spr(ti_rotor + rotor_offset, x, y) --draw rotor
+
 	
-	if started == true then
-		if s == 72 then 
-			s = 67 
-			else s += 1 
+	if started then
+		-- rotate the rotor
+		if rotor_offset == 5 then 
+			rotor_offset = 0 
+			else rotor_offset += 1 
 		end 
-		
-		if s2 == 88 then 
-			s2 = 83 
-			else s2 += 1 
-		end
 	end
 end
 __gfx__
