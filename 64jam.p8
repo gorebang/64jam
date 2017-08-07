@@ -152,6 +152,7 @@ function fire_rocket()
 			sp = 3,
 			x = player.x,
 			y = player.y,
+			dir = player.dir,
 			dx = x,
 			dy = y
 		}
@@ -194,14 +195,14 @@ end
 function draw_projectiles()
 	for r in all(rockets) do
 		local s = 112
-		if (player.dir == 12) then spr(115,r.x,r.y,1,1,false,true) end
-		if (player.dir == 1) then spr(114,r.x,r.y,1,1,false,true)  end
-		if (player.dir == 3) then spr(113,r.x, r.y) end
-		if (player.dir == 5) then spr(114,r.x, r.y) end 
-		if (player.dir == 6) then spr(115,r.x, r.y) end
-		if (player.dir == 7) then spr(114,r.x,r.y,1,1,true,false) end
-		if (player.dir == 9) then spr(113,r.x,r.y,1,1,true,true) end
-		if (player.dir == 10) then spr(114,r.x,r.y,1,1,true,true) end
+		if (r.dir == 12) then spr(115,r.x,r.y,1,1,false,true) end
+		if (r.dir == 1) then spr(114,r.x,r.y,1,1,false,true)  end
+		if (r.dir == 3) then spr(113,r.x, r.y) end
+		if (r.dir == 5) then spr(114,r.x, r.y) end
+		if (r.dir == 6) then spr(115,r.x, r.y) end
+		if (r.dir == 7) then spr(114,r.x,r.y,1,1,true,false) end
+		if (r.dir == 9) then spr(113,r.x,r.y,1,1,true,true) end
+		if (r.dir == 10) then spr(114,r.x,r.y,1,1,true,true) end
 	end
 	
 	for b in all(bullets) do
