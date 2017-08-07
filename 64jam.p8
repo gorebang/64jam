@@ -15,7 +15,7 @@ pickups={}
 rockets = {}
 bullets = {}
 
-started=false
+started = false
 
 function _init()
  poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
@@ -71,7 +71,7 @@ function _update()
 		player.y += 1 
 		m = true
 	end
-	if (m== false) then
+	if (not m) then
 		if btn(0) then 
 			player.dir = 9
 			player.x -= 1 
@@ -83,7 +83,7 @@ function _update()
 		if btn(2) then 
 			player.dir = 12
 			player.y -= 1
-	 end
+		end
 		if btn(3) then 
 			player.dir = 6
 			player.y += 1 
@@ -240,7 +240,7 @@ function _draw()
 		print ("low fuel", player.x - 31, player.y - 25, 8)
 	end
 
-	if started == false then
+	if not started then
 		print ("‹ƒ‘” fly", player.x -30, player.y - 30, 7)
 		print ("— machine gun", player.x -30, player.y - 22, 7)
 		print ("Ž rockets", player.x -30, player.y - 14, 7)
