@@ -36,8 +36,6 @@ function init_entities()
 end
 
 function _update()
-	m = false --to stop double move
-
 	if started == true then
 		sfx (1)	
 	end
@@ -47,31 +45,23 @@ function _update()
 		started = true
 	end
 
-	if btn (1) and btn (2) then 
+	if btn (1) and btn (2) then
 		player.dir = 1
 		player.x += 1
 		player.y -= 1
-		m = true
-	end
-	if btn (1) and btn (3) then 
+	elseif btn (1) and btn (3) then
 		player.dir = 5
 		player.x += 1
 		player.y += 1
-		m = true 
-	end
-	if btn (0) and btn (2) then 
+	elseif btn (0) and btn (2) then
 		player.dir = 10
 		player.x -= 1
 		player.y -= 1
-		m = true 
-	end
-	if btn (0) and btn (3) then 
+	elseif btn (0) and btn (3) then
 		player.dir = 7
 		player.x -= 1
 		player.y += 1 
-		m = true
-	end
-	if (not m) then
+	else
 		if btn(0) then 
 			player.dir = 9
 			player.x -= 1 
