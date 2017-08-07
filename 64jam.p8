@@ -126,35 +126,45 @@ function update_projectiles()
 	end
 end
 
+
+function dir_to_deltas(dir, speed)
+	local dx = 0
+	local dy = 0
+
+	if dir == 12 or dir == 10 or dir == 1 then
+		dy = -speed
+	end
+	
+	if dir == 5 or dir == 6 or dir == 7 then
+		dy = speed
+	end
+	 
+	if dir >= 1 and dir < 6 then
+		dx = speed
+	end
+	if dir > 6 and dir <= 10 then
+		dx = -speed
+	end 
+	return dx, dy
+end
+
 function fire_rocket()
 	if (player.rockets > 0) then
-		local x = 0
-		local y = 0
-		local speed = 6
 		sfx(2)
+
+		local dx
+		local dy
+		local speed = 6
 		
-		if player.dir == 12 or player.dir == 10 or player.dir == 1 then
-			y = -speed
-		end
-		
-		if player.dir == 5 or player.dir == 6 or player.dir == 7 then
-		y = speed
-		end
-		 
-		if player.dir >= 1 and player.dir < 6 then
-			x = speed
-		end
-		if player.dir > 6 and player.dir <= 10 then
-			x = -speed
-		end 
-		 
+		dx, dy = dir_to_deltas(player.dir, speed)
+
 		local r={
 			sp = 3,
 			x = player.x,
 			y = player.y,
 			dir = player.dir,
-			dx = x,
-			dy = y
+			dx = dx,
+			dy = dy
 		}
 		add(rockets, r)
 		player.rockets -=1
