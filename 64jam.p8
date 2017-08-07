@@ -116,7 +116,7 @@ function update_projectiles()
 	end
 end
 
-
+-- converts a direction and speed to a dx, dy
 function dir_to_deltas(dir, speed)
 	local dx = 0
 	local dy = 0
@@ -138,24 +138,30 @@ function dir_to_deltas(dir, speed)
 	return dx, dy
 end
 
-function fire_rocket()
-	if (player.rockets > 0) then
-		sfx(2)
-
+function create_projectile(speed)
 		local dx
 		local dy
 		local speed = 6
 		
 		dx, dy = dir_to_deltas(player.dir, speed)
 
-		local r={
-			sp = 3,
+		local r= {
 			x = player.x,
 			y = player.y,
 			dir = player.dir,
 			dx = dx,
 			dy = dy
 		}
+		return r
+end
+
+function fire_rocket()
+	if (player.rockets > 0) then
+		sfx(2)
+
+		local speed = 6
+		local r = create_projectile(speed)
+
 		add(rockets, r)
 		player.rockets -=1
 	end
@@ -163,30 +169,11 @@ end
 
 function fire_bullet()
 	if (player.bullets > 0) then
-		local x = 0
-		local y = 0
-		local speed = 4
 		sfx (0)
-		if player.dir == 12 or player.dir == 10 or player.dir == 1 then
-			y = -speed
-		end		
-		if player.dir == 5 or player.dir == 6 or player.dir == 7 then
-		y = speed
-		end
-		if player.dir >= 1 and player.dir < 6 then
-			x = speed
-		end
-		if player.dir > 6 and player.dir <= 10 then
-			x = -speed
-		end
-		 
-		local b={
-			sp = 3,
-			x = player.x,
-			y = player.y,
-			dx = x,
-			dy = y
-		}
+
+		local speed = 4
+		local b = create_projectile(speed)
+
 		add(bullets, b)
 		player.bullets -=1
 	end
