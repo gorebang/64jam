@@ -18,7 +18,7 @@ bullets = {}
 started=false
 
 function _init()
- poke(0x5f2c,3)
+ poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
  cls()
  --init_entities()
 end
@@ -36,7 +36,7 @@ function init_entities()
 end
 
 function _update()
-m = false --to stop double move
+	m = false --to stop double move
 
 	if started == true then
 		sfx (1)	
@@ -47,7 +47,7 @@ m = false --to stop double move
 		started = true
 	end
 
-if btn (1) and btn (2) then 
+	if btn (1) and btn (2) then 
 		player.dir = 1
 		player.x += 1
 		player.y -= 1
@@ -94,7 +94,7 @@ if btn (1) and btn (2) then
 	if started then player.fuel -= 1 end
 	
 	if btn(5) then fire_bullet() end
- if btnp(4) then fire_rocket() end
+	if btnp(4) then fire_rocket() end
 end
 
 function update_projectiles()
@@ -193,15 +193,15 @@ end
 
 function draw_projectiles()
 	for r in all(rockets) do
-	 local s = 112
-	 if (player.dir == 12) then spr(115,r.x,r.y,1,1,false,true) end
-	 if (player.dir == 1) then spr(114,r.x,r.y,1,1,false,true)  end
-	 if (player.dir == 3) then spr(113,r.x, r.y) end
-	 if (player.dir == 5) then spr(114,r.x, r.y) end 
-	 if (player.dir == 6) then spr(115,r.x, r.y) end
-	 if (player.dir == 7) then spr(114,r.x,r.y,1,1,true,false) end
-	 if (player.dir == 9) then spr(113,r.x,r.y,1,1,true,true) end
-	 if (player.dir == 10) then spr(114,r.x,r.y,1,1,true,true) end
+		local s = 112
+		if (player.dir == 12) then spr(115,r.x,r.y,1,1,false,true) end
+		if (player.dir == 1) then spr(114,r.x,r.y,1,1,false,true)  end
+		if (player.dir == 3) then spr(113,r.x, r.y) end
+		if (player.dir == 5) then spr(114,r.x, r.y) end 
+		if (player.dir == 6) then spr(115,r.x, r.y) end
+		if (player.dir == 7) then spr(114,r.x,r.y,1,1,true,false) end
+		if (player.dir == 9) then spr(113,r.x,r.y,1,1,true,true) end
+		if (player.dir == 10) then spr(114,r.x,r.y,1,1,true,true) end
 	end
 	
 	for b in all(bullets) do
@@ -239,7 +239,7 @@ function _draw()
 	
 	if (player.x <= -30 or player.x >= 1040 or player.y <= -30 or player.y >= 540) then
 		print ( "   return to", player.x -30, player.y + 10, 7)
-			print ("  mission area", player.x -30, player.y + 20, 7)
+		print ("  mission area", player.x -30, player.y + 20, 7)
 
 	end
 
@@ -271,7 +271,7 @@ function drawcopter(x,y)
 	if player.dir == 7 then 
 		spr(96,x,y,1,1,true,false)
 	end
-		if player.dir == 10 then 
+	if player.dir == 10 then 
 		spr(97,x,y,1,1,true,false)
 	end
 	
