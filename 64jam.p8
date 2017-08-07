@@ -59,11 +59,22 @@ function set_player_dir_from_buttons()
 			newdir = 6
 		end
 	end
-	if newdir ~= 0 then
+	if newdir ~= 0 then  -- ~= is lua's "not equal"
 		player.dir = newdir
 		player.moving = true
 	else
 		player.moving = false
+	end
+end
+function update_player()
+	if started then player.fuel -= 1 end
+	if player.moving then
+		local dx
+		local dy 
+		local speed = 1
+		dx, dy = dir_to_deltas(player.dir, speed)
+		player.x += dx
+		player.y += dy
 	end
 end
 
@@ -79,19 +90,8 @@ function _update()
 
 	set_player_dir_from_buttons()
 
-	if player.moving then
-		local dx
-		local dy 
-		local speed = 1
-		dx, dy = dir_to_deltas(player.dir, speed)
-		player.x += dx
-		player.y += dy
-	end
-
-
-
+	update_player()
 	update_projectiles()
-	if started then player.fuel -= 1 end
 	
 	if btn(5) then fire_bullet() end
 	if btnp(4) then fire_rocket() end
