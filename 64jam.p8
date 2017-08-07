@@ -35,6 +35,38 @@ function init_entities()
 	end
 end
 
+function set_player_dir_from_buttons()
+	newdir = 0
+	if btn (1) and btn (2) then
+		newdir = 1
+	elseif btn (1) and btn (3) then
+		newdir = 5
+	elseif btn (0) and btn (2) then
+		newdir = 10
+	elseif btn (0) and btn (3) then
+		newdir = 7
+	else
+		if btn(0) then 
+			newdir = 9
+		end
+		if btn(1) then 
+			newdir = 3 
+		end
+		if btn(2) then 
+			newdir = 12
+		end
+		if btn(3) then 
+			newdir = 6
+		end
+	end
+	if newdir ~= 0 then
+		player.dir = newdir
+		player.moving = true
+	else
+		player.moving = false
+	end
+end
+
 function _update()
 	if started == true then
 		sfx (1)	
@@ -45,41 +77,19 @@ function _update()
 		started = true
 	end
 
-	if btn (1) and btn (2) then
-		player.dir = 1
-		player.x += 1
-		player.y -= 1
-	elseif btn (1) and btn (3) then
-		player.dir = 5
-		player.x += 1
-		player.y += 1
-	elseif btn (0) and btn (2) then
-		player.dir = 10
-		player.x -= 1
-		player.y -= 1
-	elseif btn (0) and btn (3) then
-		player.dir = 7
-		player.x -= 1
-		player.y += 1 
-	else
-		if btn(0) then 
-			player.dir = 9
-			player.x -= 1 
-		end
-		if btn(1) then 
-			player.dir = 3 
-			player.x += 1
-		end
-		if btn(2) then 
-			player.dir = 12
-			player.y -= 1
-		end
-		if btn(3) then 
-			player.dir = 6
-			player.y += 1 
-		end
+	set_player_dir_from_buttons()
+
+	if player.moving then
+		local dx
+		local dy 
+		local speed = 1
+		dx, dy = dir_to_deltas(player.dir, speed)
+		player.x += dx
+		player.y += dy
 	end
-	
+
+
+
 	update_projectiles()
 	if started then player.fuel -= 1 end
 	
