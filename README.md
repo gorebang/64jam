@@ -4,7 +4,10 @@
 
 ## Versions
 We're using sematic versioning - http://semver.org/
-
+### 0.0.4 Tweaks to animations
+* added explosion sprites, fire sprites, crows nest
+* removed unused tiles
+* reorganised rotorblade and removed blank sprites (if we want to slow the blades later we can do so in code)
 ### 0.0.3 abznak - major refactoring
 * refactoring
 ### 0.0.2 abznak - added readme
