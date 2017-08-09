@@ -219,7 +219,7 @@ function _draw()
 	mapdraw(0,0,0,0,128,64)
 	camera(player.x-32, player.y-32)
 	draw_projectiles()
-	drawcopter(player.x,player.y)
+	draw_copter(player.x,player.y)
 	
 	if (player.bullets <= 40 and player.bullets > 0) then
 		print ("low ammo", player.x - 31, player.y - 31, 7)
@@ -251,7 +251,7 @@ end
 
 rotor_offset = 0
 
-function drawcopter(x,y)
+function draw_copter(x,y)
 	if player.dir == 12 then 
 		spr(98, x, y)
 	end
