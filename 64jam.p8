@@ -52,9 +52,9 @@ function test_direction_draw_code(ti, dy)
 end
 
 function init_ents()
-	test_direction_draw_code(ti_turret, 0)
-	test_direction_draw_code(ti_rocket, 1)
-	test_direction_draw_code(ti_tank, 3)
+	--test_direction_draw_code(ti_turret, 0)
+--	test_direction_draw_code(ti_rocket, 1)
+--	test_direction_draw_code(ti_tank, 3)
 
 	spawn_tank(player.x, player.y)
 end
@@ -106,8 +106,12 @@ end
 
 function aim_turret(ent, target)
 	-- todo - in progress
-	local dir = deltas_to_dir(ent_deltas(ent, target))
-	ent.turret_dir = 3 --dir
+	local dx, dy = round_deltas(ent_deltas(ent, target))
+	log(dx, 0)
+	log(dy, 1)
+	local dir = deltas_to_dir(dx, dy)
+	log(dir, 2)
+	ent.turret_dir = dir
 end
 
 -- create an entity
@@ -254,15 +258,25 @@ function dir_to_deltas(dir, speed)
 end
 
 
+
+function round_deltas(dx, dy)
+	if abs(dx) > abs(dy) * 2 then
+		dy = 0
+	elseif abs(dy) > abs(dx) * 2 then
+		dx = 0
+	end
+	return dx, dy
+end
+
+		
+
 -- todo - in progress
 function ent_deltas(a, b)
-	return a.x - b.x, a.y - b.y
+	return b.x - a.x, b.y - a.y
 end
 
 -- todo - in progress
 function deltas_to_dir(dx, dy)
-	local dx = 0
-	local dy = 0
 	local dir = 0
 
 
@@ -284,11 +298,11 @@ function deltas_to_dir(dx, dy)
 		end
 	else -- dy > 0
 		if (dx < 0) then
-			dir = 5
+			dir = 7
 		elseif (dx == 0) then
 			dir = 6
 		else 
-			dir = 7
+			dir = 5
 		end
 	end
 	return dir
@@ -394,7 +408,6 @@ function spr_ent(ent)
 		
 	end
 	if ent.turret_ti then
-		print (ent.turret_dir, player.x - 31, player.y - 31, 7)
 		spr_with_dir(ent.turret_ti, ent.x, ent.y, ent.turret_dir)
 		drawn = true
 	end
@@ -402,6 +415,11 @@ function spr_ent(ent)
 		 spr_with_dir(ent.ti, ent.x, ent.y, ent.dir)
 		end
 end
+
+function log(msg, offset)
+	print (msg, player.x - 31, player.y - 31 + offset * 8, 7)
+end
+
 
 function draw_projectiles()
 	for r in all(rockets) do
