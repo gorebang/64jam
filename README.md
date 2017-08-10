@@ -4,6 +4,13 @@
 
 ## Versions
 We're using sematic versioning - http://semver.org/
+### 0.0.6 Explosions and Terrain Updates
+* Reordered rocket tiles to match rest of sprite orders
+* Added Explosions
+* Don't explode and catch fire if missiles hit water
+* Added some more roads\rivers
+* Added Tent Sprite
+* Added Grass Sprites and extra road pieces
 ### 0.0.5 direction and entity code
 * refactored direction code
 * added turret drawing
