@@ -10,6 +10,9 @@ player = {
 	fuel = 800
 }
 
+ENT_TANK = "tank"
+TI_TANK = 73
+
 enemies={}
 pickups={}
 rockets = {}
@@ -18,10 +21,40 @@ bullets = {}
 started = false
 
 function _init()
- poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
- cls()
+	poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
+	cls()
+	init_player()
+  init_ents()
+
+  
  --init_entities()
 end
+
+
+function init_ents()
+	spawn_tank(player.x, player.y)
+end
+
+function init_player()
+end
+
+function spawn_tank(x, y)
+	local tank = spawn_ent(ENT_TANK, x, y, 12)
+	tank.ti = TI_TANK
+end
+
+
+function spawn_ent(typ, x, y, dir)
+	local ent = {
+		x = x,
+		y = y,
+		dir = dir,
+		typ = typ,
+	}
+	add(enemies, ent)
+	return ent
+end
+
 
 function init_entities()
 	for i=1,128 do 
@@ -194,6 +227,17 @@ function fire_bullet()
 	end
 end
 
+-- ent - entitiy, anything with a position and a sprite
+function draw_ent(e)
+	spr(e.ti, e.x, e.y)
+end
+
+function draw_ents()
+	for e in all(enemies) do
+		draw_ent(e)
+	end
+end
+
 function draw_projectiles()
 	for r in all(rockets) do
 		local s = 112
@@ -218,6 +262,7 @@ function _draw()
 	sspr(80,0,8,8, player.x-50, player.y-50, 120, 120)
 	mapdraw(0,0,0,0,128,64)
 	camera(player.x-32, player.y-32)
+	draw_ents()
 	draw_projectiles()
 	draw_copter(player.x,player.y)
 	
@@ -304,7 +349,8 @@ function draw_copter(x,y)
 		-- rotate the rotor
 		if rotor_offset == 3 then 
 			rotor_offset = 0 
-			else rotor_offset += 1 
+		else 
+			rotor_offset += 1 
 		end 
 	end
 end
