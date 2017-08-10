@@ -18,6 +18,7 @@ ti_rocket = 113
 ti_explosion = 116
 ti_fire = 118
 ti_smoke = 101
+ti_arrow = 77
 
 -- clockface directions
 dirs = {12, 1, 3, 5, 6, 7, 9, 10,}
@@ -36,6 +37,7 @@ function _init()
 	init_player()
   init_ents()
 
+
   
  --init_entities()
 end
@@ -52,6 +54,9 @@ end
 function init_ents()
 	test_direction_draw_code(ti_turret, 0)
 	test_direction_draw_code(ti_rocket, 1)
+	test_direction_draw_code(ti_tank, 3)
+
+	spawn_tank(player.x, player.y)
 end
 
 function init_player()
@@ -69,6 +74,7 @@ function spawn_tank(x, y)
 end
 
 function spawn_explosion(x,y)
+	--todo: what is this testing?
 	if pget(x+4,y + 4) != 12 then	
 		sfx(3)
 		local exp = spawn_ent(ent_exp, x , y, 12)       
@@ -89,9 +95,9 @@ function check_agro()
 	for e in all(ents) do
 		if (e.hostile) then
 			if (e.agro_range2 > dist2(e, player)) then
-	--			e.ti = ti_tank + 1
+				e.turret_ti = ti_arrow
 			else
-	--			e.ti = ti_tank + 2
+				e.turret_ti = ti_turret
 			end
 			aim_turret(e, player)
 		end
