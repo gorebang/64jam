@@ -36,17 +36,18 @@ function _init()
  --init_entities()
 end
 
-function test_direction_draw_code()
+function test_direction_draw_code(ti, dy)
 	for i,dir in pairs(DIRS) do
-		local tank = spawn_tank(player.x + i * (8), player.y)
+		local tank = spawn_tank(player.x + 8*4 + i * (8), player.y + dy*8)
 		tank.dir = dir
 		tank.turret_ti = false
-		tank.ti = TI_TURRET
+		tank.ti = ti
 	end
 end
 
 function init_ents()
-	test_direction_draw_code()
+	test_direction_draw_code(TI_TURRET, 0)
+	test_direction_draw_code(TI_ROCKET, 1)
 end
 
 function init_player()
@@ -81,6 +82,7 @@ function check_agro()
 end
 
 function aim_turret(ent, target)
+	-- TODO - in progress
 	local dir = deltas_to_dir(ent_deltas(ent, target))
 	ent.turret_dir = 3 --dir
 end
@@ -230,10 +232,12 @@ function dir_to_deltas(dir, speed)
 end
 
 
+-- TODO - in progress
 function ent_deltas(a, b)
 	return a.x - b.x, a.y - b.y
 end
 
+-- TODO - in progress
 function deltas_to_dir(dx, dy)
 	local dx = 0
 	local dy = 0
