@@ -10,18 +10,96 @@ player = {
 	fuel = 800
 }
 
-enemies={}
-pickups={}
+ENT_TANK = "tank"
+TI_TANK = 73
+TI_TURRET = 89
+TI_ROCKET = 113
+
+-- clockface directions
+DIRS = {12, 1, 3, 5, 6, 7, 9, 10,}
+
+-- ent - entity - anything with a position.  enemies, mostly
+ents= {}
+pickups= {}
 rockets = {}
 bullets = {}
 
 started = false
 
 function _init()
- poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
- cls()
+	poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
+	cls()
+	init_player()
+  init_ents()
+
+  
  --init_entities()
 end
+
+function test_direction_draw_code(ti, dy)
+	for i,dir in pairs(DIRS) do
+		local tank = spawn_tank(player.x + 8*4 + i * (8), player.y + dy*8)
+		tank.dir = dir
+		tank.turret_ti = false
+		tank.ti = ti
+	end
+end
+
+function init_ents()
+	test_direction_draw_code(TI_TURRET, 0)
+	test_direction_draw_code(TI_ROCKET, 1)
+end
+
+function init_player()
+end
+
+function spawn_tank(x, y)
+	local tank = spawn_ent(ENT_TANK, x, y, 12)
+	tank.ti = TI_TANK
+	tank.dir = 12
+	tank.turret_ti = TI_TURRET
+	tank.turret_dir = 12
+  tank.agro_range2 = 1000  -- aggrevation range, how close before they try to attack you.  The two is because it's the square of the distance
+	tank.hostile = true
+	return tank
+end
+
+function dist2(a, b)
+	return (a.x - b.x)^2 + (a.y - b.y)^2
+end
+
+function check_agro() 
+	for e in all(ents) do
+		if (e.hostile) then
+			if (e.agro_range2 > dist2(e, player)) then
+	--			e.ti = TI_TANK + 1
+			else
+	--			e.ti = TI_TANK + 2
+			end
+			aim_turret(e, player)
+		end
+	end
+end
+
+function aim_turret(ent, target)
+	-- TODO - in progress
+	local dir = deltas_to_dir(ent_deltas(ent, target))
+	ent.turret_dir = 3 --dir
+end
+
+-- create an entity
+function spawn_ent(typ, x, y, dir)
+	local ent = {
+		x = x,
+		y = y,
+		dir = dir,
+		typ = typ,
+		hostile = false, --default
+	}
+	add(ents, ent)
+	return ent
+end
+
 
 function init_entities()
 	for i=1,128 do 
@@ -153,6 +231,51 @@ function dir_to_deltas(dir, speed)
 	return dx, dy
 end
 
+
+-- TODO - in progress
+function ent_deltas(a, b)
+	return a.x - b.x, a.y - b.y
+end
+
+-- TODO - in progress
+function deltas_to_dir(dx, dy)
+	local dx = 0
+	local dy = 0
+	local dir = 0
+
+
+	if (dy < 0) then
+		if (dx < 0) then
+			dir = 10
+		elseif (dx == 0) then
+			dir = 12
+		else 
+			dir = 1
+		end
+	elseif (dy == 0) then
+		if (dx < 0) then
+			dir = 9
+		elseif (dx == 0) then
+			dir = 0
+		else 
+			dir = 3
+		end
+	else -- dy > 0
+		if (dx < 0) then
+			dir = 5
+		elseif (dx == 0) then
+			dir = 6
+		else 
+			dir = 7
+		end
+	end
+	return dir
+end
+
+
+
+
+
 function create_projectile(speed)
 		local dx
 		local dy
@@ -177,6 +300,7 @@ function fire_rocket()
 		local speed = 6
 		local r = create_projectile(speed)
 
+		r.ti = TI_ROCKET
 		add(rockets, r)
 		player.rockets -=1
 	end
@@ -194,18 +318,46 @@ function fire_bullet()
 	end
 end
 
+-- ent - entitiy, anything with a position and a sprite
+function draw_ent(e)
+	spr_ent(e)
+end
+
+function draw_ents()
+	for e in all(ents) do
+		draw_ent(e)
+	end
+end
+
+
+-- draw a sprite facing a direction
+function spr_with_dir(ti, x, y, dir)
+	local diag_offset = 0
+	local up_offset = 1
+	local right_offset = 2
+	if (dir == 12) then spr(ti+up_offset,x,y,1,1,false,false) end
+	if (dir == 1) then spr(ti+diag_offset,x,y,1,1,true,false)  end
+	if (dir == 3) then spr(ti+right_offset,x, y) end
+	if (dir == 5) then spr(ti+diag_offset,x, y, 1, 1, true, true) end
+	if (dir == 6) then spr(ti+up_offset,x, y, 1, 1, false, true) end
+	if (dir == 7) then spr(ti+diag_offset,x,y,1,1,false,true) end
+	if (dir == 9) then spr(ti+right_offset,x,y,1,1,true,true) end
+	if (dir == 10) then spr(ti+diag_offset,x,y,1,1,false,false) end
+end
+
+
+-- draw a sprite using ent data
+function spr_ent(ent)
+	spr_with_dir(ent.ti, ent.x, ent.y, ent.dir)
+	if ent.turret_ti then
+		print (ent.turret_dir, player.x - 31, player.y - 31, 7)
+		spr_with_dir(ent.turret_ti, ent.x, ent.y, ent.turret_dir)
+	end
+end
+
 function draw_projectiles()
 	for r in all(rockets) do
-		local s = 112
-		-- todo - standardise sprite layout, write "draw_sprite(ti, x, y, dir)"
-		if (r.dir == 12) then spr(115,r.x,r.y,1,1,false,true) end
-		if (r.dir == 1) then spr(114,r.x,r.y,1,1,false,true)  end
-		if (r.dir == 3) then spr(113,r.x, r.y) end
-		if (r.dir == 5) then spr(114,r.x, r.y) end
-		if (r.dir == 6) then spr(115,r.x, r.y) end
-		if (r.dir == 7) then spr(114,r.x,r.y,1,1,true,false) end
-		if (r.dir == 9) then spr(113,r.x,r.y,1,1,true,true) end
-		if (r.dir == 10) then spr(114,r.x,r.y,1,1,true,true) end
+		spr_ent(r)
 	end
 	
 	for b in all(bullets) do
@@ -218,8 +370,15 @@ function _draw()
 	sspr(80,0,8,8, player.x-50, player.y-50, 120, 120)
 	mapdraw(0,0,0,0,128,64)
 	camera(player.x-32, player.y-32)
+
+
+
+	check_agro()
+
+
+	draw_ents()
 	draw_projectiles()
-	drawcopter(player.x,player.y)
+	draw_copter(player.x,player.y)
 	
 	if (player.bullets <= 40 and player.bullets > 0) then
 		print ("low ammo", player.x - 31, player.y - 31, 7)
@@ -251,7 +410,8 @@ end
 
 rotor_offset = 0
 
-function drawcopter(x,y)
+function draw_copter(x,y)
+
 	if player.dir == 12 then 
 		spr(98, x, y)
 	end
@@ -304,7 +464,8 @@ function drawcopter(x,y)
 		-- rotate the rotor
 		if rotor_offset == 3 then 
 			rotor_offset = 0 
-			else rotor_offset += 1 
+		else 
+			rotor_offset += 1 
 		end 
 	end
 end

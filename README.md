@@ -4,6 +4,11 @@
 
 ## Versions
 We're using sematic versioning - http://semver.org/
+### 0.0.5 direction and entity code
+* refactored direction code
+* added turret drawing
+* added direction test code
+* TODO: switch rocket sprites to tank orientation order
 ### 0.0.4 Tweaks to animations
 * added explosion sprites, fire sprites, crows nest
 * removed unused tiles
