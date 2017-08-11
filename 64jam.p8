@@ -348,6 +348,12 @@ end
 
 
 
+function ent_get_aim_dir(ent)
+	if ent.turret_dir then
+		return ent.turret_dir
+	end
+	return ent.dir
+end
 
 
 function create_projectile(owner_ent, speed)
@@ -355,13 +361,13 @@ function create_projectile(owner_ent, speed)
 		local dy
 		local speed = 6
 		
-		dx, dy = dir_to_deltas(player.dir, speed)
+		dx, dy = dir_to_deltas(ent_get_aim_dir(owner_ent), speed)
 
 		local r = {
 			owner = owner_ent,
-			x = player.x,
-			y = player.y,
-			dir = player.dir,
+			x = owner_ent.x,
+			y = owner_ent.y,
+			dir = owner_ent.dir,
 			dx = dx,
 			dy = dy
 		}
@@ -394,7 +400,9 @@ function fire_bullet(owner_ent)
 		b.dir = 1
 
 		add(projectiles, b)
-		player.bullets -=1
+		if (owner_ent.bullets) then
+			owner_ent.bullets -=1
+		end
 	end
 end
 
