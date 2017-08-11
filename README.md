@@ -4,6 +4,11 @@
 
 ## Versions
 We're using sematic versioning - http://semver.org/
+### 0.0.8 spawning tanks at flags
+* added flags
+* spawn a tank at each flag
+### 0.0.7 refactoring projectile code
+* merged rockets and bullets into projectiles
 ### 0.0.6 Explosions and Terrain Updates
 * Reordered rocket tiles to match rest of sprite orders
 * Added Explosions
