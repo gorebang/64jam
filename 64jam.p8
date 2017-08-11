@@ -26,7 +26,7 @@ ti_bullet = 112
 dirs = {12, 1, 3, 5, 6, 7, 9, 10,}
 
 -- ent - entity - anything with a position.  enemies, mostly
-ents= {}
+ents = {}
 pickups= {}
 projectiles = {}
 test_tank = {}
@@ -104,13 +104,19 @@ function dist2(a, b)
 	return (a.x - b.x)^2 + (a.y - b.y)^2
 end
 
+function go_agro(e) 
+--	if e.cool_down < 0 then
+		fire_bullet(e)
+--	end
+end
 function check_agro() 
 	for e in all(ents) do
 		if (e.hostile) then
 			if (e.agro_range2 > dist2(e, player)) then
-				e.turret_ti = ti_arrow
+				go_agro(e)
+				--e.turret_ti = ti_arrow
 			else
-				e.turret_ti = ti_turret
+				--e.turret_ti = ti_turret
 			end
 			aim_turret(e, player)
 		end
@@ -146,7 +152,6 @@ function init_entities()
 		--loop through map and exchange tiles for entities
 			if mget(i,j) == 10 then
 				mset(i,j,1)
-				
 			end
 		end
 	end
@@ -212,8 +217,8 @@ function _update()
 	update_player()
 	update_projectiles()
 	
-	if btn(5) then fire_bullet() end
-	if btnp(4) then fire_rocket() end
+	if btn(5) then fire_bullet(player) end
+	if btnp(4) then fire_rocket(player) end
 end
 
 
@@ -233,10 +238,38 @@ function update_projectile(b)
 		return false
 end
 
+function collision_check(r)
+	for e in all(ents) do
+		if one_collision_check(r, e) then
+			return
+		end
+	end
+	one_collision_check(r, player)
+end
+
+function one_collision_check(r, e)
+	if (r.owner != e) then
+		if dist2(r, e) < 10 then
+			collide(r, e)
+			return true -- nb, can only hit one thing
+		end
+	end
+	return false
+end
+
+function collide(r, e)
+	del(ents, e)	
+	spawn_explosion(e.x, e.y)		
+	handle_destruction(ent)
+end
+
+function handle_destruction(ent)
+end
 
 function update_projectiles()
 	for r in all(projectiles) do
-		local ended = update_projectile(r)
+		update_projectile(r)
+		collision_check(r)
 	end
 end
 
@@ -317,14 +350,15 @@ end
 
 
 
-function create_projectile(speed)
+function create_projectile(owner_ent, speed)
 		local dx
 		local dy
 		local speed = 6
 		
 		dx, dy = dir_to_deltas(player.dir, speed)
 
-		local r= {
+		local r = {
+			owner = owner_ent,
 			x = player.x,
 			y = player.y,
 			dir = player.dir,
@@ -349,12 +383,12 @@ function fire_rocket()
 	end
 end
 
-function fire_bullet()
+function fire_bullet(owner_ent)
 	if (player.bullets > 0) then
 		sfx (0)
 
 		local speed = 4
-		local b = create_projectile(speed)
+		local b = create_projectile(owner_ent, speed)
 		b.fuel = 5 
 		b.ti = ti_bullet
 		b.dir = 1
