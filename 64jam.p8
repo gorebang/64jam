@@ -12,6 +12,7 @@ player = {
 
 ent_explosion = "explosion"
 ent_tank = "tank"
+ent_debug = "debug"
 ti_tank = 73
 ti_turret = 89
 ti_rocket = 113
@@ -28,6 +29,7 @@ ents= {}
 pickups= {}
 rockets = {}
 bullets = {}
+test_tank = {}
 
 started = false
 
@@ -44,19 +46,21 @@ end
 
 function test_direction_draw_code(ti, dy)
 	for i,dir in pairs(dirs) do
-		local tank = spawn_tank(player.x + 8*4 + i * (8), player.y + dy*8)
+		local tank = spawn_ent(ent_debug, player.x + 8*4 + i * (8), player.y + dy*8)
 		tank.dir = dir
 		tank.turret_ti = false
 		tank.ti = ti
 	end
 end
 
-function init_ents()
-	--test_direction_draw_code(ti_turret, 0)
---	test_direction_draw_code(ti_rocket, 1)
---	test_direction_draw_code(ti_tank, 3)
 
-	spawn_tank(player.x, player.y)
+
+function init_ents()
+	test_direction_draw_code(ti_turret, 0)
+	test_direction_draw_code(ti_rocket, 1)
+	test_direction_draw_code(ti_tank, 3)
+
+	test_tank = spawn_tank(player.x, player.y)
 end
 
 function init_player()
@@ -68,7 +72,7 @@ function spawn_tank(x, y)
 	tank.dir = 12
 	tank.turret_ti = ti_turret
 	tank.turret_dir = 12
-  tank.agro_range2 = 1000  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
+  tank.agro_range2 = 500  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
 	tank.hostile = true
 	return tank
 end
@@ -107,10 +111,10 @@ end
 function aim_turret(ent, target)
 	-- todo - in progress
 	local dx, dy = round_deltas(ent_deltas(ent, target))
-	log(dx, 0)
-	log(dy, 1)
+--	log(dx, 0)
+--	log(dy, 1)
 	local dir = deltas_to_dir(dx, dy)
-	log(dir, 2)
+--	log(dir, 2)
 	ent.turret_dir = dir
 end
 
@@ -381,12 +385,8 @@ function spr_with_dir(ti, x, y, dir)
 	if (dir == 10) then spr(ti+diag_offset,x,y,1,1,false,false) end
 end
 
-
--- draw a sprite using ent data
-function spr_ent(ent)
-	drawn = false
-	
-	if ent.ti == ti_explosion or ent.ti == ti_fire then
+		
+function draw_animated(ent)
 		spr_with_dir(ent.ti + ent.offset, ent.x, ent.y, ent.dir)	
 		drawn = true
 		ent.t += 1
@@ -405,15 +405,20 @@ function spr_ent(ent)
 				end
 			end  	
 		end
-		
+end
+
+-- draw a sprite using ent data
+function spr_ent(ent)
+	if ent.ti == ti_explosion or ent.ti == ti_fire then
+		draw_animated(ent)
+		return	
 	end
+
+	spr_with_dir(ent.ti, ent.x, ent.y, ent.dir)
 	if ent.turret_ti then
 		spr_with_dir(ent.turret_ti, ent.x, ent.y, ent.turret_dir)
 		drawn = true
 	end
-		if not drawn then
-		 spr_with_dir(ent.ti, ent.x, ent.y, ent.dir)
-		end
 end
 
 function log(msg, offset)
@@ -437,6 +442,8 @@ function _draw()
 	mapdraw(0,0,0,0,128,64)
 	camera(player.x-32, player.y-32)
 
+	log("hello", 0)
+	log(test_tank.ti, 1)
 
 
 	check_agro()
