@@ -20,6 +20,7 @@ ti_explosion = 116
 ti_fire = 118
 ti_smoke = 101
 ti_arrow = 77
+ti_bullet = 112
 
 -- clockface directions
 dirs = {12, 1, 3, 5, 6, 7, 9, 10,}
@@ -27,8 +28,7 @@ dirs = {12, 1, 3, 5, 6, 7, 9, 10,}
 -- ent - entity - anything with a position.  enemies, mostly
 ents= {}
 pickups= {}
-rockets = {}
-bullets = {}
+projectiles = {}
 test_tank = {}
 
 started = false
@@ -216,35 +216,27 @@ function _update()
 	if btnp(4) then fire_rocket() end
 end
 
-function update_projectiles()
-	-- todo, combine projectiles arrays
-	-- todo, track projectile fuel, instead of using distance from player
 
-	for b in all(bullets) do
+-- returns true iff the projectile runs out of fuel
+function update_projectile(b)
 		b.x += b.dx
 		b.y += b.dy
-		
-		if b.x < player.x - 38 
-			or b.x > player.x + 38  
-			or b.y < player.y - 38
-			or b.y > player.y + 38
-		then
-			del(bullets, b)
+		b.fuel -= 1
+
+		if b.fuel < 0 then
+			del(projectiles, b)
+			if b.explode_when_out_of_fuel then
+				spawn_explosion(b.x, b.y)
+			end
+			return true
 		end
-	end
-	
-	for r in all(rockets) do
-		r.x += r.dx
-		r.y += r.dy
-		
-		if r.x < player.x - 28 
-			or r.x > player.x + 28  
-			or r.y < player.y - 28
-			or r.y > player.y + 28
-		then
-			del(rockets,r)
-			spawn_explosion(r.x, r.y)
-		end
+		return false
+end
+
+
+function update_projectiles()
+	for r in all(projectiles) do
+		local ended = update_projectile(r)
 	end
 end
 
@@ -348,9 +340,11 @@ function fire_rocket()
 
 		local speed = 6
 		local r = create_projectile(speed)
+		r.fuel = 6
 
 		r.ti = ti_rocket
-		add(rockets, r)
+		r.explode_when_out_of_fuel = true
+		add(projectiles, r)
 		player.rockets -=1
 	end
 end
@@ -361,8 +355,11 @@ function fire_bullet()
 
 		local speed = 4
 		local b = create_projectile(speed)
+		b.fuel = 5 
+		b.ti = ti_bullet
+		b.dir = 1
 
-		add(bullets, b)
+		add(projectiles, b)
 		player.bullets -=1
 	end
 end
@@ -436,12 +433,8 @@ end
 
 
 function draw_projectiles()
-	for r in all(rockets) do
+	for r in all(projectiles) do
 		spr_ent(r)
-	end
-	
-	for b in all(bullets) do
-		spr(112,b.x, b.y)
 	end
 end
 
