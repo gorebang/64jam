@@ -14,7 +14,7 @@ ent_explosion = "explosion"
 ent_tank = "tank"
 ent_debug = "debug"
 ti_tank = 73
-ti_turret = 89
+ti_turret = 105 -- 89
 ti_rocket = 113
 ti_explosion = 116
 ti_fire = 118
@@ -53,15 +53,24 @@ function test_direction_draw_code(ti, dy)
 	end
 end
 
+function test_tank(ti, dy)
+	for i,dir in pairs(dirs) do
+		local tank = spawn_tank(player.x + 8*4 + i * (8), player.y + dy*8)
+		tank.dir = dir
+	end
+end
 
 
 function init_ents()
 	test_direction_draw_code(ti_turret, 0)
 	test_direction_draw_code(ti_rocket, 1)
 	test_direction_draw_code(ti_tank, 3)
+	test_tank(ti_tank, 5)
+	test_tank(ti_tank, 8)
 
 	test_tank = spawn_tank(player.x, player.y)
 end
+
 
 function init_player()
 end
