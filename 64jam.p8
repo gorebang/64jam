@@ -5,9 +5,12 @@ player = {
 	x=84* 8 - 4, 
 	y=40.5* 8 - 4, 
 	dir=5,
-	bullets = 200,
-	rockets = 16,
-	fuel = 800
+	bullets = 2000,
+	rockets = 160,
+	fuel = 800, 
+	health = 2000,
+	bulletdamage = 25,
+	rocketdamage = 400
 }
 
 ent_explosion = "explosion"
@@ -91,8 +94,10 @@ function spawn_tank(x, y)
 	tank.dir = 12
 	tank.turret_ti = ti_turret
 	tank.turret_dir = 12
-  tank.agro_range2 = 500  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
+	tank.health = 400
+   tank.agro_range2 = 500  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
 	tank.hostile = true
+	tank.bullets = 5000
 	return tank
 end
 
@@ -117,6 +122,7 @@ function spawn_ent(typ, x, y, dir)
 		dir = dir,
 		typ = typ,
 		hostile = false, --default
+		health = 400
 	}
 	add(ents, ent)
 	return ent
@@ -310,10 +316,17 @@ function one_collision_check(r, e)
 	return false
 end
 
-function collide(r, e)
-	del(ents, e)	
-	spawn_explosion(e.x, e.y)		
-	handle_destruction(ent)
+function collide(r, e) --check bullets against things
+	e.health -= r.damage
+	if (e.hostile == true) then
+		del(projectiles, r)
+	end
+	if (e.health <= 0) then
+
+		del(ents, e)	
+		spawn_explosion(e.x, e.y)		
+		handle_destruction(ent)
+	end
 end
 
 
@@ -418,13 +431,14 @@ function create_projectile(owner_ent, speed)
 		return r
 end
 
-function fire_rocket()
-	if (player.rockets > 0) then
+function fire_rocket(owner_ent)
+	if (owner_ent.rockets > 0) then
 		sfx(2)
 
 		local speed = 6
 		local r = create_projectile(player, speed)
 		r.fuel = 6
+		r.damage = player.rocketdamage
 
 		r.ti = ti_rocket
 		r.explode_when_out_of_fuel = true
@@ -434,12 +448,13 @@ function fire_rocket()
 end
 
 function fire_bullet(owner_ent)
-	if (player.bullets > 0) then
+	if (owner_ent.bullets > 0) then
 		sfx (0)
 
 		local speed = 4
 		local b = create_projectile(owner_ent, speed)
 		b.fuel = 5 
+		b.damage = player.bulletdamage
 		b.ti = ti_bullet
 		b.dir = 1
 
