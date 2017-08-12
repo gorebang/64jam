@@ -13,6 +13,8 @@ player = {
 ent_explosion = "explosion"
 ent_tank = "tank"
 ent_debug = "debug"
+
+-- ti - tile index
 ti_tank = 73
 ti_turret = 105 -- 89
 ti_rocket = 113
@@ -22,6 +24,8 @@ ti_smoke = 101
 ti_arrow = 77
 ti_bullet = 112
 ti_flag = 127
+ti_rotor_top = 64  
+ti_rotor_side = 68
 
 -- clockface directions
 dirs = {12, 1, 3, 5, 6, 7, 9, 10,}
@@ -34,28 +38,16 @@ test_tank = {}
 
 started = false
 
+
+
+-----------------------------------  spawning, instantiating, initializing calls -------------------------------------------------------
+
 function _init()
 	poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
 	cls()
 	init_player()
   init_ents()
   init_map()
-end
-
-function test_direction_draw_code(ti, dy)
-	for i,dir in pairs(dirs) do
-		local tank = spawn_ent(ent_debug, player.x + 8*4 + i * (8), player.y + dy*8)
-		tank.dir = dir
-		tank.turret_ti = false
-		tank.ti = ti
-	end
-end
-
-function test_tank(ti, dy)
-	for i,dir in pairs(dirs) do
-		local tank = spawn_tank(player.x + 8*4 + i * (8), player.y + dy*8)
-		tank.dir = dir
-	end
 end
 
 
@@ -105,8 +97,7 @@ function spawn_tank(x, y)
 end
 
 function spawn_explosion(x,y)
-	--todo: what is this testing?
-	if pget(x+4,y + 4) != 12 then	
+	if pget(x+4,y + 4) != 12 then	 -- this does a pixel color check at the explosion location to make sure the color isn't blue (water)
 		sfx(3)
 		local exp = spawn_ent(ent_exp, x , y, 12)       
 		exp.ti = ti_explosion
@@ -114,9 +105,59 @@ function spawn_explosion(x,y)
 		exp.t = 0 --timer
 		exp.framecount = 3
 		exp.drawnthframe = 4 --update animation every nth frame
-		--todo: make this animation stuff available for all types of entities
 	end
 end
+
+
+-- create an entity
+function spawn_ent(typ, x, y, dir)
+	local ent = {
+		x = x,
+		y = y,
+		dir = dir,
+		typ = typ,
+		hostile = false, --default
+	}
+	add(ents, ent)
+	return ent
+end
+
+function init_map()
+	for i = 1, 128 do 
+		for j = 1, 64 do
+		--loop through map and exchange tiles for entities
+			local ti = mget(i,j)
+			if ti == ti_flag then
+				-- todo: replace with spawn_random_tanks
+				local tank = spawn_tank(i*8,j*8)
+				printh('spawned tank in init_map')
+			end
+		end
+	end
+end
+-----------------------------------  test helpers -------------------------------------------------------
+
+function log(msg, offset)
+	print (msg, player.x - 31, player.y - 31 + offset * 8, 7)
+end
+
+function test_direction_draw_code(ti, dy)
+	for i,dir in pairs(dirs) do
+		local tank = spawn_ent(ent_debug, player.x + 8*4 + i * (8), player.y + dy*8)
+		tank.dir = dir
+		tank.turret_ti = false
+		tank.ti = ti
+	end
+end
+
+function test_tank(ti, dy)
+	for i,dir in pairs(dirs) do
+		local tank = spawn_tank(player.x + 8*4 + i * (8), player.y + dy*8)
+		tank.dir = dir
+	end
+end
+
+
 
 function dist2(a, b)
 	return (a.x - b.x)^2 + (a.y - b.y)^2
@@ -151,32 +192,6 @@ function aim_turret(ent, target)
 	ent.turret_dir = dir
 end
 
--- create an entity
-function spawn_ent(typ, x, y, dir)
-	local ent = {
-		x = x,
-		y = y,
-		dir = dir,
-		typ = typ,
-		hostile = false, --default
-	}
-	add(ents, ent)
-	return ent
-end
-
-function init_map()
-	for i = 1, 128 do 
-		for j = 1, 64 do
-		--loop through map and exchange tiles for entities
-			local ti = mget(i,j)
-			if ti == ti_flag then
-				-- todo: replace with spawn_random_tanks
-				local tank = spawn_tank(i*8,j*8)
-				printh('spawned tank in init_map')
-			end
-		end
-	end
-end
 
 function set_player_dir_from_buttons()
 	local newdir = 0
@@ -223,6 +238,9 @@ function update_player()
 	end
 end
 
+-----------------------------------  update calls -------------------------------------------------------
+
+
 function _update()
 	if started == true then
 		sfx (1)	
@@ -259,6 +277,20 @@ function update_projectile(b)
 		return false
 end
 
+function handle_destruction(ent)
+end
+
+function update_projectiles()
+	for r in all(projectiles) do
+		update_projectile(r)
+		collision_check(r)
+	end
+end
+
+
+-----------------------------------  helpers -------------------------------------------------------
+
+
 function collision_check(r)
 	for e in all(ents) do
 		if one_collision_check(r, e) then
@@ -284,15 +316,6 @@ function collide(r, e)
 	handle_destruction(ent)
 end
 
-function handle_destruction(ent)
-end
-
-function update_projectiles()
-	for r in all(projectiles) do
-		update_projectile(r)
-		collision_check(r)
-	end
-end
 
 -- converts a direction and speed to a dx, dy
 function dir_to_deltas(dir, speed)
@@ -427,7 +450,9 @@ function fire_bullet(owner_ent)
 	end
 end
 
--- ent - entitiy, anything with a position and a sprite
+-----------------------------------  draw calls -------------------------------------------------------
+
+-- ent - entity, anything with a position and a sprite
 function draw_ent(e)
 	spr_ent(e)
 end
@@ -490,9 +515,6 @@ function spr_ent(ent)
 	end
 end
 
-function log(msg, offset)
-	print (msg, player.x - 31, player.y - 31 + offset * 8, 7)
-end
 
 
 function draw_projectiles()
@@ -510,9 +532,7 @@ function _draw()
 	log("hello", 0)
 	log(test_tank.ti, 1)
 
-
 	check_agro()
-
 
 	draw_ents()
 	draw_projectiles()
@@ -576,15 +596,7 @@ function draw_copter(x,y)
 		spr(97,x,y,1,1,true,false)
 	end
 	
-
-
-
-	--
 	-- rotor drawing code
-	--
-
-	ti_rotor_top = 64  -- ti - tile index
-	ti_rotor_side = 68
 
 	local ti_rotor
 
@@ -597,7 +609,6 @@ function draw_copter(x,y)
 
 	spr(ti_rotor + rotor_offset, x, y) --draw rotor
 
-	
 	if started then
 		-- rotate the rotor
 		if rotor_offset == 3 then 
