@@ -33,9 +33,11 @@ ti_fuel = 24
 ti_ammo = 25
 ti_refuel = 34
 ti_dirt = 9
+ti_health = 126
 
 -- clockface directions
 dirs = {12, 1, 3, 5, 6, 7, 9, 10,}
+no_dir = 0
 
 -- ent - entity - anything with a positionreemies, mostly
 ents = {}
@@ -114,12 +116,33 @@ function spawn_random_tanks(x, y, r, n)
 	end
 end
 
+function spawn_item(typ, ti, x, y)
+	local item = spawn_ent(ent_ammo, x, y, no_dir)
+	item.ti = ti
+	item.item = true
+	item.bullets = 0
+	item.rockets = 0
+	item.health = 0
+	item.fuel = 0
+	return item
+end
+
+
 function spawn_ammo(x, y)
-	local ammo = spawn_ent(ent_ammo, x, y, 3)
-	ammo.ti = ti_ammo
-	ammo.item = true
-	printh("spawn ammo")
-	return ammo
+	local item = spawn_item(ent_ammo, ti_ammo, x, y)
+	item.bullets = 1000
+	item.rockets = 8
+	return item
+end
+function spawn_fuel(x, y)
+	local item = spawn_item(ent_ammo, ti_fuel, x, y)
+	item.fuel = 400
+	return item
+end
+function spawn_health(x, y)
+	local item = spawn_item(ent_ammo, ti_health, x, y)
+	item.health = 1000
+	return item
 end
 function spawn_tank(x, y)
 	local tank = spawn_ent(ent_tank, x, y, 3)
@@ -167,14 +190,24 @@ function init_map()
 		for j = 1, 64 do
 		--loop through map and exchange tiles for entities
 			local ti = mget(i,j)
+			local x = i * 8
+			local y = j * 8
 			if ti == ti_flag then
-				local tank = spawn_tank(i*8,j*8)
+				local tank = spawn_tank(x,y)
 				mset(i, j, ti_dirt)
 				--printh('spawned tank in init_map')
-				spawn_random_tanks(i * 8,j * 8,  6, rnd(2) + 2)
+				spawn_random_tanks(x,y,  6, rnd(2) + 2)
 			end
 			if ti == ti_ammo then
-				local ammo = spawn_ammo(i*8,j*8)
+				local ammo = spawn_ammo(x,y)
+				mset(i, j, ti_dirt)
+			end
+			if ti == ti_health then
+				local ammo = spawn_health(x,y)
+				mset(i, j, ti_dirt)
+			end
+			if ti == ti_fuel then
+				local ammo = spawn_fuel(x,y)
 				mset(i, j, ti_dirt)
 			end
 		end
@@ -350,17 +383,27 @@ end
 -----------------------------------  helpers -------------------------------------------------------
 
 
+-- called when a ent (currently only ever the player) runs over another 'item' (since it is ideally an item)
+function ent_collide(ent, item)
+	if not item.item then return end
+	del(ents, item)
+	-- todo: play sound
+	ent.health += item.health
+	ent.rockets += item.rockets
+	ent.bullets += item.bullets
+end
+
+
+-- check the player running into ents
 function player_collision_check(r)
-	if 1 then
-		return
-	end
 	for e in all(ents) do
-		if one_collision_check(r, e) then
+		if one_collision_check(player, e, ent_collide) then
 			return
 		end
 	end
-	one_collision_check(r, player)
 end
+
+-- check projectiles running into ents
 function collision_check(r)
 	for e in all(ents) do
 		if one_collision_check(r, e, collide) then
@@ -545,6 +588,10 @@ function spr_with_dir(ti, x, y, dir)
 	local diag_offset = 0
 	local up_offset = 1
 	local right_offset = 2
+
+	-- no dir, use no offset
+	if (dir == no_dir) then spr(ti,x,y,1,1,false,false)  end
+
 	if (dir == 12) then spr(ti+up_offset,x,y,1,1,false,false) end
 	if (dir == 1) then spr(ti+diag_offset,x,y,1,1,true,false)  end
 	if (dir == 3) then spr(ti+right_offset,x, y) end
@@ -751,14 +798,14 @@ b3b050000006333b003533003003bc700003b00000d000d060606000d0d000000000000000665000
 0003c77b303b00500003b00000065650503b3305000000000000000000000000000000000005d5000056d0000000000000000000000000000000000000000000
 05653cb3b330000000b33b00000000000003b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0056b33b0b0000000005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000900880090006000000000000000000005dd000000005d00000000000000000000000000000000000ffffffff
-000000000000000000000000000000000000000000898800060996000000000000000000556d500000556d0000000000000000000000000000000000ffffffff
-00000000000008000000000000000000000000000789987000869800000000000000000056d6650000d6650000000000000000000000000000000000fff5888f
-00000000000000700800080000a7800000099000799799970969996000808000000808000d6666500066d6000d656650000000000000000000000000fff5888f
-000a00000000000a0700070000000000079aa970079aa9700796a970008998000089980000566d6000566d00d6d66d6d000000000000000000000000fff5ffff
-00000000080000000a000a00000a7800007aa7000077a700007aa600008aa800008aa8000005666500d56d0005665650000000000000000000000000fff5ffff
-00000000007000000000000000000000000000000000000000000000000000000000000000005d55006d650000d56d00000000000000000000000000fff5ffff
-00000000000a00000000000000000000000000000000000000000000000000000000000000000d5d0006500000000000000000000000000000000000fff5ffff
+0000000000000000000000000000000000000000900880090006000000000000000000005dd000000005d000000000000000000000000000ffffffffffffffff
+000000000000000000000000000000000000000000898800060996000000000000000000556d500000556d00000000000000000000000000ffbbbbbfffffffff
+00000000000008000000000000000000000000000789987000869800000000000000000056d6650000d66500000000000000000000000000ffb8b8bffff5888f
+00000000000000700800080000a7800000099000799799970969996000808000000808000d6666500066d6000d6566500000000000000000ffb8b8bffff5888f
+000a00000000000a0700070000000000079aa970079aa9700796a970008998000089980000566d6000566d00d6d66d6d0000000000000000ffb888bffff5ffff
+00000000080000000a000a00000a7800007aa7000077a700007aa600008aa800008aa8000005666500d56d00056656500000000000000000ffb8b8bffff5ffff
+00000000007000000000000000000000000000000000000000000000000000000000000000005d55006d650000d56d000000000000000000ffbbbbbffff5ffff
+00000000000a00000000000000000000000000000000000000000000000000000000000000000d5d00065000000000000000000000000000fffffffffff5ffff
 a09090909090909020309020309090f0f0f0f0f0f0f0f0f090f0f0f0f0f090909090f0f0f0909090f0f09090909090d0e090f0f0909090909090909090909090
 90909090909090909090d2a0a0a0a0a0a0a0a0a0a0a0a0a0d390909090909090909090909090909090d2a0a0a0a0a0a0a07271a0d3909090f0f090d2a0a0a0a0
 a0d390909090902030902030909090f0f0f0f090f090f0f0f0909090909090909090f0f0f0f090f0f0f090909090d0e090f0f090909090909090909090909090
