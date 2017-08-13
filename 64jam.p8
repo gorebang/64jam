@@ -35,6 +35,8 @@ ti_refuel = 34
 ti_dirt = 9
 ti_health = 126
 
+item_spawn_chance = 20  -- 20% chance to spawn item on death
+
 -- clockface directions
 dirs = {12, 1, 3, 5, 6, 7, 9, 10,}
 no_dir = 0
@@ -127,6 +129,13 @@ function spawn_item(typ, ti, x, y)
 	return item
 end
 
+
+function spawn_random_item(x, y)
+	local fns = {spawn_ammo, spawn_fuel, spawn_health}
+	local i = flr(rnd(3)) + 1
+	printh(i)
+	fns[i](x, y)
+end
 
 function spawn_ammo(x, y)
 	local item = spawn_item(ent_ammo, ti_ammo, x, y)
@@ -602,6 +611,19 @@ function spr_with_dir(ti, x, y, dir)
 	if (dir == 10) then spr(ti+diag_offset,x,y,1,1,false,false) end
 end
 
+function handle_explosion_end(ent)
+	if (rnd(100) < item_spawn_chance) then
+		-- sometimes, spawn an item
+		spawn_random_item(ent.x, ent.y)
+		del(ents, ent)
+		return
+	else
+		-- turn into fire
+		ent.framecount = 2
+		ent.drawnthframe = 3
+		ent.ti = ti_fire 
+	end
+end
 		
 function draw_animated(ent)
 		spr_with_dir(ent.ti + ent.offset, ent.x, ent.y, ent.dir)	
@@ -616,9 +638,7 @@ function draw_animated(ent)
 			if ent.offset == ent.framecount then 
 				ent.offset = 0
 				if (ent.ti == ti_explosion) then
-					ent.framecount = 2
-					ent.drawnthframe = 3
-					ent.ti = ti_fire 
+					handle_explosion_end(ent)
 				end
 			end  	
 		end
