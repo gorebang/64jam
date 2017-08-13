@@ -33,7 +33,7 @@ ti_rotor_side = 68
 -- clockface directions
 dirs = {12, 1, 3, 5, 6, 7, 9, 10,}
 
--- ent - entity - anything with a position.  enemies, mostly
+-- ent - entity - anything with a positionreemies, mostly
 ents = {}
 pickups= {}
 projectiles = {}
@@ -77,6 +77,9 @@ function spawn_random_tank(x, y, r)
 
  i += ri
  j += rj 
+ p = {}
+ p.x = i * 8
+ p.y = j * 8
 
 local ti =  mget(i, j)
 local isdirt = fget(ti, 1)
@@ -84,8 +87,7 @@ local isdirt = fget(ti, 1)
 if isdirt then
 
  for e in all(ents) do
-  if e.x == i * 8 then return false end --todo: make this check an area instead to spread tanks out
-  if e.y == j * 8 then return false end
+  if abs(dist2(e, p))  <=  320 then return false end --todo: seems dodgy, shouldn't place any
  end
  spawn_tank(i * 8, j * 8)
  return true
@@ -142,7 +144,8 @@ function spawn_ent(typ, x, y, dir)
 		dir = dir,
 		typ = typ,
 		hostile = false, --default
-		health = 400
+		health = 400,
+      rad = 10
 	}
 	add(ents, ent)
 	return ent
@@ -198,8 +201,10 @@ end
 function check_agro() 
 	for e in all(ents) do
 		if (e.hostile) then
-			if (e.agro_range2 > dist2(e, player)) then
-			--	go_agro(e)
+			if (e.agro_range2 > abs(dist2(e, player))) then
+        
+				go_agro(e)
+    
 				--e.turret_ti = ti_arrow
 			else
 				--e.turret_ti = ti_turret
@@ -267,11 +272,22 @@ end
 
 -----------------------------------  update calls -------------------------------------------------------
 
+function respawn()
+ player.x=84* 8 - 4
+ player.y=40.5* 8 - 4
+ player.dir=5
+ player.bullets = 2000
+ player.rockets = 160
+ player.fuel = 800
+ player.health = 2000
+end
 
 function _update()
 	if started == true then
 		sfx (1)	
 	end
+
+ if player.health <= 0 then respawn() end
 
 	if btn(0) or btn(1) or btn(2)
 		or btn(3) or btn (4) or btn(5) then
@@ -329,7 +345,7 @@ end
 
 function one_collision_check(r, e)
 	if (r.owner != e) then
-		if dist2(r, e) < 10 then
+		if abs(dist2(r, e)) < 20 then
 			collide(r, e)
 			return true -- nb, can only hit one thing
 		end
@@ -343,7 +359,6 @@ function collide(r, e) --check bullets against things
 		del(projectiles, r)
 	end
 	if (e.health <= 0) then
-
 		del(ents, e)	
 		spawn_explosion(e.x, e.y)		
 		handle_destruction(ent)
@@ -424,8 +439,6 @@ function deltas_to_dir(dx, dy)
 	return dir
 end
 
-
-
 function ent_get_aim_dir(ent)
 	if ent.turret_dir then
 		return ent.turret_dir
@@ -458,8 +471,9 @@ function fire_rocket(owner_ent)
 
 		local speed = 6
 		local r = create_projectile(player, speed)
-		r.fuel = 6
+		r.fuel = 7
 		r.damage = player.rocketdamage
+      r.rad = 20
 
 		r.ti = ti_rocket
 		r.explode_when_out_of_fuel = true
@@ -474,7 +488,7 @@ function fire_bullet(owner_ent)
 
 		local speed = 4
 		local b = create_projectile(owner_ent, speed)
-		b.fuel = 5 
+		b.fuel = 8 
 		b.damage = player.bulletdamage
 		b.ti = ti_bullet
 		b.dir = 1
@@ -565,10 +579,10 @@ function _draw()
 	mapdraw(0,0,0,0,128,64)
 	camera(player.x-32, player.y-32)
 
-	log("hello", 0)
+	log(player.health, 0)
 	--log(test_tank.ti, 1)
 
-	check_agro() --todo: should probably be decoupledfrom draw
+	check_agro() --todo: should probably be decoupled from draw
 
 	draw_ents()
 	draw_projectiles()
