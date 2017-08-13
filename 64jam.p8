@@ -29,6 +29,10 @@ ti_bullet = 112
 ti_flag = 127
 ti_rotor_top = 64  
 ti_rotor_side = 68
+ti_fuel = 24
+ti_ammo = 25
+ti_refuel = 34
+ti_dirt = 9
 
 -- clockface directions
 dirs = {12, 1, 3, 5, 6, 7, 9, 10,}
@@ -46,7 +50,7 @@ started = false
 -----------------------------------  spawning, instantiating, initializing calls -------------------------------------------------------
 
 function _init()
-	poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
+--	poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
 	cls()
 	init_player()
   init_ents()
@@ -110,17 +114,23 @@ function spawn_random_tanks(x, y, r, n)
 	end
 end
 
+function spawn_ammo(x, y)
+	local ammo = spawn_ent(ent_ammo, x, y, 3)
+	ammo.ti = ti_ammo
+	ammo.item = true
+	printh("spawn ammo")
+	return ammo
+end
 function spawn_tank(x, y)
-	local tank = spawn_ent(ent_tank, x, y, 12)
+	local tank = spawn_ent(ent_tank, x, y, 3)
 	tank.ti = ti_tank
-	tank.dir = 3
 	tank.turret_ti = ti_turret
 	tank.turret_dir = 12
 	tank.health = 400
-   tank.agro_range2 = 600  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
+	tank.agro_range2 = 600  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
 	tank.hostile = true
 	tank.bullets = 5000
- tank.bulletdamage = 15
+	tank.bulletdamage = 15
 	return tank
 end
 
@@ -159,9 +169,13 @@ function init_map()
 			local ti = mget(i,j)
 			if ti == ti_flag then
 				local tank = spawn_tank(i*8,j*8)
-           mset(i, j, 9)
+				mset(i, j, ti_dirt)
 				--printh('spawned tank in init_map')
-         spawn_random_tanks(i * 8,j * 8,  6, rnd(2) + 2)
+				spawn_random_tanks(i * 8,j * 8,  6, rnd(2) + 2)
+			end
+			if ti == ti_ammo then
+				local ammo = spawn_ammo(i*8,j*8)
+				mset(i, j, ti_dirt)
 			end
 		end
 	end
@@ -269,6 +283,7 @@ function update_player()
 		player.x += dx
 		player.y += dy
 	end
+	player_collision_check()
 end
 
 -----------------------------------  update calls -------------------------------------------------------
@@ -335,7 +350,10 @@ end
 -----------------------------------  helpers -------------------------------------------------------
 
 
-function collision_check(r)
+function player_collision_check(r)
+	if 1 then
+		return
+	end
 	for e in all(ents) do
 		if one_collision_check(r, e) then
 			return
@@ -343,11 +361,19 @@ function collision_check(r)
 	end
 	one_collision_check(r, player)
 end
+function collision_check(r)
+	for e in all(ents) do
+		if one_collision_check(r, e, collide) then
+			return
+		end
+	end
+	one_collision_check(r, player, collide)
+end
 
-function one_collision_check(r, e)
+function one_collision_check(r, e, collide_fn)
 	if (r.owner != e) then
 		if abs(dist2(r, e)) < 20 then
-			collide(r, e)
+			collide_fn(r, e)
 			return true -- nb, can only hit one thing
 		end
 	end
@@ -766,7 +792,7 @@ a090909090909090a1a1a1a1a1a1a1a1a1a1909090a190909090909090909090909090d0e0909090
 a090909090909090909090909090a1a1a19090909090a1a190909090909090909090d0e09090909090909090909090909090909090909090909090d0e0909090
 90909090b0b0b0d2a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a09090908090d0e090909090909090908090d0e09090909090909090d2a0a0
 a0d3909090909090909090909090a1a190909090909090a1a19090909090909090d0e09090909090909090909090909090909090909090909090d0e090909090
-909090b0c2c290a0a0a0a0a0a0a0a0a0a090909090a0a0a0a0a0a0a0a0a0a0a0a0a0d3909090c1d1e1e182e1e1e1e1e1e1e182e09090909090909090d2a0a0a0
+909090b0c2c290a0a0a0a0a0a0a0a0a0a081909091a0a0a0a0a0a0a0a0a0a0a0a0a0d3909090c1d1e1e182e1e1e1e1e1e1e182e09090909090909090d2a0a0a0
 a0a0d3909090909090908190909090909090909090909090a190909090909090d0e09090909090909090909090909090909090909090909090d0e090f7909090
 909090b0a0a0f0a0a0a0a0a0a0a0a0a0a09020909090a0a0a0a0a0a0a0a0a0a0a0a0a0d39090909090d0e0909090909090d0e090909090909090f190a0a0a0a0
 a0a0a0a0d39090909090909090909090909090909090909090a19090909090d0e09090909090909090909090909090909090909090909090c1d1e1e1e1e1e1e1
@@ -774,7 +800,7 @@ e1e182b1e3a0d3a0a0a0a0a0a0a0a0a0909020202090a0a0a0a0a0a0a0a0a0a0a0a0a0a090809090
 a0a0a0a0a0a0d390d2d3909090909090909090909090909090a190909090d0e09090909090909090909090909090909090909090909090909090909090909090
 90d0e090d2a0a0a0a0a0a0a0a0a0a0a0909090909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0d39090d0e0909090909090d0e090f0204031509061203090e3a0a0a0
 a0a0a0a0a0a0a0a0a0a0d3909091909090909090909090909090a19090d0e0909090909090909090909090909090909090909090909090909090909090909090
-d0e09090a0a0a0a0a0a0a0a0a0a0a0a0a090909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090c1d1e1e182e1e1e1e1e090902030809090902030809090a0a0a0
+d0e09090a0a0a0a0a0a0a0a0a0a0a0a0a081909091a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090c1d1e1e182e1e1e1e1e090902030809090902030809090a0a0a0
 a0a0a0a0a0a0a0a0a0a0a0a0d390909090909090909090909090a190d0e0909090909090909090909090909090909090909090909090909090909090909090d0
 e0909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090908090d0e090909090f190902131313131314190909090a0a0a0
 a0a0a0a0a0a0a0a0a0a0a0a0a0d3909090909090909090909090a1d0e0909090909090909090909090909090909090909090909090909090909090909090d0e0
