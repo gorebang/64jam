@@ -6,10 +6,10 @@ player = {
 	y=40.5* 8 - 4, 
 	dir=5,
 	bullets = 2000,
-	rockets = 160,
+	rockets = 16,
 	fuel = 800, 
 	health = 2000,
-	bulletdamage = 25,
+	bulletdamage = 55,
 	rocketdamage = 400
 }
 
@@ -117,9 +117,10 @@ function spawn_tank(x, y)
 	tank.turret_ti = ti_turret
 	tank.turret_dir = 12
 	tank.health = 400
-   tank.agro_range2 = 500  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
+   tank.agro_range2 = 600  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
 	tank.hostile = true
 	tank.bullets = 5000
+ tank.bulletdamage = 15
 	return tank
 end
 
@@ -277,7 +278,7 @@ function respawn()
  player.y=40.5* 8 - 4
  player.dir=5
  player.bullets = 2000
- player.rockets = 160
+ player.rockets = 16
  player.fuel = 800
  player.health = 2000
 end
@@ -489,7 +490,7 @@ function fire_bullet(owner_ent)
 		local speed = 4
 		local b = create_projectile(owner_ent, speed)
 		b.fuel = 8 
-		b.damage = player.bulletdamage
+		b.damage = owner_ent.bulletdamage
 		b.ti = ti_bullet
 		b.dir = 1
 
@@ -512,7 +513,6 @@ function draw_ents()
 		draw_ent(e)
 	end
 end
-
 
 -- draw a sprite facing a direction
 function spr_with_dir(ti, x, y, dir)
@@ -579,7 +579,7 @@ function _draw()
 	mapdraw(0,0,0,0,128,64)
 	camera(player.x-32, player.y-32)
 
-	log(player.health, 0)
+	log("+" .. player.health .. " r" ..player.rockets .. " b" .. player.bullets, 0)
 	--log(test_tank.ti, 1)
 
 	check_agro() --todo: should probably be decoupled from draw
@@ -729,7 +729,7 @@ b3b050000006333b003533003003bc700003b00000d000d060606000d0d000000000000000665000
 000000000000000000000000000000000000000000898800060996000000000000000000556d500000556d0000000000000000000000000000000000ffffffff
 00000000000008000000000000000000000000000789987000869800000000000000000056d6650000d6650000000000000000000000000000000000fff5888f
 00000000000000700800080000a7800000099000799799970969996000808000000808000d6666500066d6000d656650000000000000000000000000fff5888f
-000100000000000a0700070000000000079aa970079aa9700796a970008998000089980000566d6000566d00d6d66d6d000000000000000000000000fff5ffff
+000a00000000000a0700070000000000079aa970079aa9700796a970008998000089980000566d6000566d00d6d66d6d000000000000000000000000fff5ffff
 00000000080000000a000a00000a7800007aa7000077a700007aa600008aa800008aa8000005666500d56d0005665650000000000000000000000000fff5ffff
 00000000007000000000000000000000000000000000000000000000000000000000000000005d55006d650000d56d00000000000000000000000000fff5ffff
 00000000000a00000000000000000000000000000000000000000000000000000000000000000d5d0006500000000000000000000000000000000000fff5ffff

@@ -4,6 +4,14 @@
 
 ## Versions
 We're using sematic versioning - http://semver.org/
+### 0.0.9 Rough Gameplay
+* Arted 70% of island
+* Player Health\Enemy Health
+* Respawn when killed
+* Spawning of enemies around flags (tanks only)
+* fixed bug with missiles colliding with wrong entities (abs on dist2 checks)
+* Still seems buggy... there are explosions off screen
+
 ### 0.0.8 spawning tanks at flags
 * added flags
 * spawn a tank at each flag
