@@ -35,7 +35,7 @@ ti_refuel = 34
 ti_dirt = 9
 ti_health = 126
 
-item_spawn_chance = 20  -- 20% chance to spawn item on death
+default_item_spawn_chance = 20  -- 20% chance to spawn item on death
 
 -- clockface directions
 dirs = {12, 1, 3, 5, 6, 7, 9, 10,}
@@ -54,11 +54,11 @@ started = false
 -----------------------------------  spawning, instantiating, initializing calls -------------------------------------------------------
 
 function _init()
---	poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
+	poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
 	cls()
 	init_player()
-  init_ents()
-  init_map()
+	init_ents()
+	init_map()
 end
 
 
@@ -163,13 +163,15 @@ function spawn_tank(x, y)
 	tank.hostile = true
 	tank.bullets = 5000
 	tank.bulletdamage = 15
+	tank.item_spawn_chance = default_item_spawn_chance
 	return tank
 end
 
-function spawn_explosion(x,y)
+function spawn_explosion(x,y, item_spawn_chance)
 	if pget(x+4,y + 4) != 12 then	 -- this does a pixel color check at the explosion location to make sure the color isn't blue (water)
 		sfx(3)
 		local exp = spawn_ent(ent_exp, x , y, 12)       
+		exp.item_spawn_chance = item_spawn_chance or 0
 		exp.ti = ti_explosion
 		exp.offset = 0
 		exp.t = 0 --timer
@@ -186,6 +188,7 @@ function spawn_ent(typ, x, y, dir)
 		y = y,
 		dir = dir,
 		typ = typ,
+		item_spawn_chance = 0,
 		hostile = false, --default
 		health = 400,
       rad = 10
@@ -439,7 +442,7 @@ function collide(r, e) --check bullets against things
 	end
 	if (e.health <= 0) then
 		del(ents, e)	
-		spawn_explosion(e.x, e.y)		
+		spawn_explosion(e.x, e.y, e.item_spawn_chance)		
 		handle_destruction(ent)
 	end
 end
@@ -612,7 +615,7 @@ function spr_with_dir(ti, x, y, dir)
 end
 
 function handle_explosion_end(ent)
-	if (rnd(100) < item_spawn_chance) then
+	if (rnd(100) < ent.item_spawn_chance) then
 		-- sometimes, spawn an item
 		spawn_random_item(ent.x, ent.y)
 		del(ents, ent)
