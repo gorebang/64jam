@@ -4,6 +4,10 @@
 
 ## Versions
 We're using sematic versioning - http://semver.org/
+### 0.0.10 Items
+* spawn items on the map
+* items can be picked up
+* occasionally spawn items when tanks explode
 ### 0.0.9 Rough Gameplay
 * Arted 70% of island
 * Player Health\Enemy Health
