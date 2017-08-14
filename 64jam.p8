@@ -79,6 +79,7 @@ function init_player()
 		rockets = 16,
 		fuel = 800, 
 		health = 2000,
+		hostile = true,
 		bulletdamage = 55,
 		rocketdamage = 400
 	}
@@ -104,7 +105,7 @@ local isdirt = fget(ti, 1)
 if isdirt then
 
  for e in all(ents) do
-  if abs(dist2(e, p))  <=  320 then return false end --todo: seems dodgy, shouldn't place any
+  if dist8(e, p) <= 3 then return false end --todo: seems dodgy, shouldn't place any
  end
  spawn_tank(i * 8, j * 8)
  return true
@@ -168,7 +169,7 @@ function spawn_tank(x, y)
 	tank.turret_ti = ti_turret
 	tank.turret_dir = 12
 	tank.health = 400
-	tank.agro_range2 = 600  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
+	tank.agro_range8 = 4  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
 	tank.hostile = true
 	tank.bullets = 5000
 	tank.bulletdamage = 15
@@ -277,8 +278,10 @@ end
 
 
 
-function dist2(a, b)
-	return (a.x - b.x)^2 + (a.y - b.y)^2
+-- distance in tiles between two ents/projectiles
+function dist8(a, b)
+	local scale = 8  -- sacrifice accuracy to avoid overflowing, return distance in tiles
+	return sqrt((a.x/scale - b.x/scale)^2 + (a.y/scale - b.y/scale)^2)
 end
 
 function go_agro(e) 
@@ -290,13 +293,13 @@ end
 function check_agro() 
 	for e in all(ents) do
 		if (e.hostile) then
-			if (e.agro_range2 > abs(dist2(e, player))) then
-        
+			local dist = dist8(e, player)
+			if (e.agro_range8 > dist) then
+				printh("dist8 - " .. dist)
 				go_agro(e)
-    
-				--e.turret_ti = ti_arrow
+				e.turret_ti = ti_arrow
 			else
-				--e.turret_ti = ti_turret
+				e.turret_ti = ti_turret
 			end
 			aim_turret(e, player)
 		end
@@ -450,7 +453,7 @@ end
 
 function one_collision_check(r, e, collide_fn)
 	if (r.owner != e) then
-		if abs(dist2(r, e)) < 20 then
+		if dist8(r, e) < 1 then
 			collide_fn(r, e)
 			return true -- nb, can only hit one thing
 		end
