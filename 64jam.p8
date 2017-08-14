@@ -2,15 +2,6 @@ pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
 player = {
-	x=84* 8 - 4, 
-	y=40.5* 8 - 4, 
-	dir=5,
-	bullets = 2000,
-	rockets = 16,
-	fuel = 800, 
-	health = 2000,
-	bulletdamage = 55,
-	rocketdamage = 400
 }
 
 ent_explosion = "explosion"
@@ -45,7 +36,6 @@ no_dir = 0
 ents = {}
 pickups= {}
 projectiles = {}
-test_tank = {}
 
 started = false
 
@@ -56,6 +46,7 @@ started = false
 function _init()
 	poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
 	cls()
+	init_vars()
 	init_player()
 	init_ents()
 	init_map()
@@ -72,7 +63,25 @@ function init_ents()
 end
 
 
+function init_vars()
+	ents = {}
+	pickups= {}
+	projectiles = {}
+end
+
+
 function init_player()
+	player = {
+		x=84* 8 - 4, 
+		y=40.5* 8 - 4, 
+		dir=5,
+		bullets = 2000,
+		rockets = 16,
+		fuel = 800, 
+		health = 2000,
+		bulletdamage = 55,
+		rocketdamage = 400
+	}
 end
 
 
@@ -167,7 +176,26 @@ function spawn_tank(x, y)
 	return tank
 end
 
+function debug_status(msg, ent)
+	printh("--------------")
+	printh(msg)
+	printh(trace())
+	printh("ent count: " .. #ents)
+	printh("projectile count: " .. #projectiles)
+	if ent then
+		debug_ent(ent)
+	end
+	printh("")
+	printh("Player:")
+	debug_ent(player)
+end
+
+function debug_ent(ent)
+	printh("ent - typ:" .. (ent.typ or "NIL") .. " " .. ent.x .. "," .. ent.y)
+end
+
 function spawn_explosion(x,y, item_spawn_chance)
+	debug_status("Spawn Explosion " .. x .. "," .. y)
 	if pget(x+4,y + 4) != 12 then	 -- this does a pixel color check at the explosion location to make sure the color isn't blue (water)
 		sfx(3)
 		local exp = spawn_ent(ent_exp, x , y, 12)       
@@ -254,9 +282,10 @@ function dist2(a, b)
 end
 
 function go_agro(e) 
---	if e.cool_down < 0 then
-		fire_bullet(e)
---	end
+	debug_status("agro", e)
+	if (rnd(1) < .3) then
+		fire_bullet(e, rnd(2)+2)
+	end
 end
 function check_agro() 
 	for e in all(ents) do
@@ -334,13 +363,7 @@ end
 -----------------------------------  update calls -------------------------------------------------------
 
 function respawn()
- player.x=84* 8 - 4
- player.y=40.5* 8 - 4
- player.dir=5
- player.bullets = 2000
- player.rockets = 16
- player.fuel = 800
- player.health = 2000
+	init_player()
 end
 
 function _update()
@@ -532,7 +555,6 @@ end
 function create_projectile(owner_ent, speed)
 		local dx
 		local dy
-		local speed = 6
 		
 		dx, dy = dir_to_deltas(ent_get_aim_dir(owner_ent), speed)
 
@@ -564,13 +586,13 @@ function fire_rocket(owner_ent)
 	end
 end
 
-function fire_bullet(owner_ent)
+function fire_bullet(owner_ent, speed)
 	if (owner_ent.bullets > 0) then
 		sfx (0)
 
-		local speed = 4
+		speed = speed or 4
 		local b = create_projectile(owner_ent, speed)
-		b.fuel = 8 
+		b.fuel = 10
 		b.damage = owner_ent.bulletdamage
 		b.ti = ti_bullet
 		b.dir = 1
