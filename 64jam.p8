@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 8
+version 10
 __lua__
 player = {
 }
@@ -25,6 +25,9 @@ ti_ammo = 25
 ti_refuel = 34
 ti_dirt = 9
 ti_health = 126
+
+flag_dirt = 1
+flag_water = 4
 
 default_item_spawn_chance = 20  -- 20% chance to spawn item on death
 
@@ -85,38 +88,52 @@ function init_player()
 	}
 end
 
+function is_foo(i, j, flagi)
+	local ti =  mget(i, j)
+	local isdirt = fget(ti, flagi)
+	return isdirt
+end
+
+function is_dirt(i, j)
+	return is_foo(i, j, flag_dirt)
+end
+
+function is_water(i, j)
+	return is_foo(i, j, flag_water)
+end
+
 
 function spawn_random_tank(x, y, r)
- i = x / 8 
- j = y / 8
-
- local ri = rnd(2*r) - r -- a range of  -r to r tiles
- local rj = rnd(2*r) - r 
-
- i += ri
- j += rj 
- p = {}
- p.x = i * 8
- p.y = j * 8
-
-local ti =  mget(i, j)
-local isdirt = fget(ti, 1)
-
-if isdirt then
-
- for e in all(ents) do
-  if dist8(e, p) <= 3 then return false end --todo: seems dodgy, shouldn't place any
- end
- spawn_tank(i * 8, j * 8)
- return true
- else
-  return false
+	return spawn_random_foo(spawn_tank, is_dirt, x, y, r)
 end
+
+-- spawn_fn - spawns a whatever
+-- check_fn - checks that it's safe to spawn a whatever
+function spawn_random_foo(spawn_fn, check_fn, x, y, r)
+	local i = x / 8 
+	local j = y / 8
+
+	local ri = rnd(2*r) - r -- a range of  -r to r tiles
+	local rj = rnd(2*r) - r 
+
+	i += ri
+	j += rj 
+	p = {}
+	p.x = i * 8
+	p.y = j * 8
+
+	if check_fn(i, j) then
+ 		for e in all(ents) do
+ 		 if dist8(e, p) <= 3 then return false end --todo: seems dodgy, shouldn't place any
+ 		end
+ 		spawn_tank(i * 8, j * 8)
+ 		return true
+	end
+	return false
 end
 
 -- r - radius
 function spawn_random_tanks(x, y, r, n)
-	-- in progress
 	local count = 0
 	for i = 1, n*2 do
 		if spawn_random_tank(x, y, r) then
@@ -187,16 +204,16 @@ function debug_status(msg, ent)
 		debug_ent(ent)
 	end
 	printh("")
-	printh("Player:")
+	printh("player:")
 	debug_ent(player)
 end
 
 function debug_ent(ent)
-	printh("ent - typ:" .. (ent.typ or "NIL") .. " " .. ent.x .. "," .. ent.y)
+	printh("ent - typ:" .. (ent.typ or "nil") .. " " .. ent.x .. "," .. ent.y)
 end
 
 function spawn_explosion(x,y, item_spawn_chance)
-	debug_status("Spawn Explosion " .. x .. "," .. y)
+	debug_status("spawn explosion " .. x .. "," .. y)
 	if pget(x+4,y + 4) != 12 then	 -- this does a pixel color check at the explosion location to make sure the color isn't blue (water)
 		sfx(3)
 		local exp = spawn_ent(ent_exp, x , y, 12)       
@@ -889,17 +906,17 @@ a090909090909090909090909090a1a1a19090909090a1a190909090909090909090d0e090909090
 a0d3909090909090909090909090a1a190909090909090a1a19090909090909090d0e09090909090909090909090909090909090909090909090d0e090909090
 909090b0c2c290a0a0a0a0a0a0a0a0a0a081909091a0a0a0a0a0a0a0a0a0a0a0a0a0d3909090c1d1e1e182e1e1e1e1e1e1e182e09090909090909090d2a0a0a0
 a0a0d3909090909090908190909090909090909090909090a190909090909090d0e09090909090909090909090909090909090909090909090d0e090f7909090
-909090b0a0a0f0a0a0a0a0a0a0a0a0a0a09020909090a0a0a0a0a0a0a0a0a0a0a0a0a0d39090909090d0e0909090909090d0e090909090909090f190a0a0a0a0
+909090b0a0a0f0a0a0a0a0a0a0a0a0a0a09020909090a0a0a0a0a090a0a0a0a0a0a0a0d39090909090d0e0909090909090d0e090909090909090f190a0a0a0a0
 a0a0a0a0d39090909090909090909090909090909090909090a19090909090d0e09090909090909090909090909090909090909090909090c1d1e1e1e1e1e1e1
-e1e182b1e3a0d3a0a0a0a0a0a0a0a0a0e7e720202090a0a0a0a0a0a0a0a0a0a0a0a0a0a090809090d0e0909090909090d0e090909090909040311050a0a0b2a0
+e1e182b1e3a0d3a0a0f7a0a0a0a0a0a0e7e720202090a0a0a0a0a090a0a0a0a0a0a0a0a090809090d0e0909090909090d0e090909090909040311050a0a0b2a0
 a0a0a0a0a0a0d390d2d3909090909090909090909090909090a190909090d0e09090909090909090909090909090909090909090909090909090909090909090
-90d0e090d2a0a0a0a0a0a0a0a0a0a0a0e79090909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0d39090d0e0909090909090d0e090f0204031509061203090e3a0a0a0
+90d0e090d2a0a0a0a090a0a0a0a0a0a0e79090909090a0a0a0a0a0f7a0a0a0a0a0a0a0a0d39090d0e0909090909090d0e090f0204031509061203090e3a0a0a0
 a0a0a0a0a0a0a0a0a0a0d3909091909090909090909090909090a19090d0e0909090909090909090909090909090909090909090909090909090909090909090
-d0e09090a0a0a0a0a0a0a0a0a0a0a0a0a081909091a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090c1d1e1e182e1e1e1e1e090902030809090902030809090a0a0a0
+d0e09090a0a0a0a0a090a0a0a0a0a0a0a081909091a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090c1d1e1e182e1e1e1e1e090902030809090902030809090a0a0a0
 a0a0a0a0a0a0a0a0a0a0a0a0d390909090909090909090909090a190d0e0909090909090909090909090909090909090909090909090909090909090909090d0
-e0909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090908090d0e090909090f190902131313131314190909090a0a0a0
+e0909090a0a0a0a0a090a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090908090d0e090909090f190902131313131314190909090a0a0a0
 a0a0a0a0a0a0a0a0a0a0a0a0a0d3909090909090909090909090a1d0e0909090909090909090909090909090909090909090909090909090909090909090d0e0
-90909090a0f2a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090f090d0e090909090909090909090909090909090b090f0a0a0a0
+90909090a0f2a0a0a0f7a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090f090d0e090909090909090909090909090909090b090f0a0a0a0
 a0a0a0a0a0a0a0a0a0a0a0a0a0a0d3909090909090909090909090a1909090909090909090909090909090909090909090909090909090909090909090c1d1e1
 82b19090a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0d390d0e09090909090909090d0e1e1e1e1e1e1e1e1e1e1e1b3c2a0
 a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0d39090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090d0
