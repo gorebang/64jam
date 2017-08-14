@@ -4,13 +4,17 @@ __lua__
 player = {
 }
 
+debug_mode = false
+
 ent_explosion = "explosion"
 ent_tank = "tank"
 ent_debug = "debug"
 
 -- ti - tile index
 ti_tank = 73
-ti_turret = 105 -- 89
+ti_boat = 121
+ti_turret = 105
+ti_boat_turret = 89
 ti_rocket = 113
 ti_explosion = 116
 ti_fire = 118
@@ -102,14 +106,7 @@ function is_water(i, j)
 	return is_foo(i, j, flag_water)
 end
 
-
 function spawn_random_tank(x, y, r)
-	return spawn_random_foo(spawn_tank, is_dirt, x, y, r)
-end
-
--- spawn_fn - spawns a whatever
--- check_fn - checks that it's safe to spawn a whatever
-function spawn_random_foo(spawn_fn, check_fn, x, y, r)
 	local i = x / 8 
 	local j = y / 8
 
@@ -121,13 +118,27 @@ function spawn_random_foo(spawn_fn, check_fn, x, y, r)
 	p = {}
 	p.x = i * 8
 	p.y = j * 8
+	local spawn_fn = false
 
-	if check_fn(i, j) then
- 		for e in all(ents) do
- 		 if dist8(e, p) <= 3 then return false end --todo: seems dodgy, shouldn't place any
- 		end
- 		spawn_tank(i * 8, j * 8)
- 		return true
+	if is_dirt(i,j) then
+		spawn_fn = spawn_tank
+	elseif is_water(i,j) then
+		spawn_fn = spawn_boat
+	else
+		return false
+	end
+
+	if is_nearby_ent(p) then
+		return false
+	end
+
+	spawn_fn(i * 8, j * 8)
+	return true
+end
+
+function is_nearby_ent(point) 
+	for e in all(ents) do
+		if dist8(e, p) <= 3 then return true end
 	end
 	return false
 end
@@ -180,10 +191,25 @@ function spawn_health(x, y)
 	item.health = 1000
 	return item
 end
+
+function spawn_boat(x, y)
+	local tank = spawn_ent(ent_boat, x, y, 3)
+	tank.ti = ti_boat
+	tank.turret_ti = ti_boat_turret
+	set_basic_stats(tank)
+	return tank
+end
+
 function spawn_tank(x, y)
 	local tank = spawn_ent(ent_tank, x, y, 3)
 	tank.ti = ti_tank
 	tank.turret_ti = ti_turret
+	set_basic_stats(tank)
+	return tank
+end
+
+-- sets the basic stats for a tank or boat
+function set_basic_stats(tank)
 	tank.turret_dir = 12
 	tank.health = 400
 	tank.agro_range8 = 4  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
@@ -191,8 +217,8 @@ function spawn_tank(x, y)
 	tank.bullets = 5000
 	tank.bulletdamage = 15
 	tank.item_spawn_chance = default_item_spawn_chance
-	return tank
 end
+
 
 function debug_status(msg, ent)
 	printh("--------------")
@@ -213,7 +239,7 @@ function debug_ent(ent)
 end
 
 function spawn_explosion(x,y, item_spawn_chance)
-	debug_status("spawn explosion " .. x .. "," .. y)
+	--debug_status("spawn explosion " .. x .. "," .. y)
 	if pget(x+4,y + 4) != 12 then	 -- this does a pixel color check at the explosion location to make sure the color isn't blue (water)
 		sfx(3)
 		local exp = spawn_ent(ent_exp, x , y, 12)       
@@ -302,7 +328,7 @@ function dist8(a, b)
 end
 
 function go_agro(e) 
-	debug_status("agro", e)
+	--debug_status("agro", e)
 	if (rnd(1) < .3) then
 		fire_bullet(e, rnd(2)+2)
 	end
@@ -312,11 +338,11 @@ function check_agro()
 		if (e.hostile) then
 			local dist = dist8(e, player)
 			if (e.agro_range8 > dist) then
-				printh("dist8 - " .. dist)
+				-- printh("dist8 - " .. dist)
 				go_agro(e)
-				e.turret_ti = ti_arrow
+				if debug_mode then e.turret_ti = ti_arrow end
 			else
-				e.turret_ti = ti_turret
+				if debug_mode then e.turret_ti = ti_turret end
 			end
 			aim_turret(e, player)
 		end
