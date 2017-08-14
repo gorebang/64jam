@@ -4,6 +4,9 @@
 
 ## Versions
 We're using sematic versioning - http://semver.org/
+### 0.0.12 rocket tanks
+* added rocket tanks
+* added heat mechanic
 ### 0.0.11 boats
 * boats
 * bug fixes

@@ -10,16 +10,19 @@ ent_explosion = "explosion"
 ent_tank = "tank"
 ent_debug = "debug"
 
+rocket_tank_chance = 0.3
+
 -- ti - tile index
+ti_arrow = 77
 ti_tank = 73
 ti_boat = 121
 ti_turret = 105
 ti_boat_turret = 89
+ti_rocket_turret = ti_arrow --todo
 ti_rocket = 113
 ti_explosion = 116
 ti_fire = 118
 ti_smoke = 101
-ti_arrow = 77
 ti_bullet = 112
 ti_flag = 127
 ti_rotor_top = 64  
@@ -88,7 +91,10 @@ function init_player()
 		health = 2000,
 		hostile = true,
 		bulletdamage = 55,
-		rocketdamage = 400
+		rocketdamage = 400,
+		bullet_heat = 0,
+		rocket_heat = 0,
+		heat = 0,
 	}
 end
 
@@ -132,7 +138,11 @@ function spawn_random_tank(x, y, r)
 		return false
 	end
 
-	spawn_fn(i * 8, j * 8)
+	local tank = spawn_fn(i * 8, j * 8)
+	local rand = rnd(1)
+	if (rand < rocket_tank_chance) then
+		set_rocket_stats(tank)
+	end
 	return true
 end
 
@@ -171,7 +181,6 @@ end
 function spawn_random_item(x, y)
 	local fns = {spawn_ammo, spawn_fuel, spawn_health}
 	local i = flr(rnd(3)) + 1
-	printh(i)
 	fns[i](x, y)
 end
 
@@ -216,7 +225,19 @@ function set_basic_stats(tank)
 	tank.hostile = true
 	tank.bullets = 5000
 	tank.bulletdamage = 15
+	tank.bullet_heat = 2  -- amount of heat firing a bullet costs
+	tank.rocketdamage = false
+	tank.rockets = 0
 	tank.item_spawn_chance = default_item_spawn_chance
+	tank.heat = 0 -- how hot the tank is (how long it has to wait before firing again)
+end
+
+-- upgrade a tank to rocket tank
+function set_rocket_stats(tank)
+	tank.rocketdamage = 400
+	tank.rockets = 10 --nb, they will start firing bullets when they run out of rockets
+	tank.turret_ti = ti_rocket_turret
+	tank.rocket_heat = 20
 end
 
 
@@ -263,7 +284,7 @@ function spawn_ent(typ, x, y, dir)
 		item_spawn_chance = 0,
 		hostile = false, --default
 		health = 400,
-      rad = 10
+		rad = 10
 	}
 	add(ents, ent)
 	return ent
@@ -329,8 +350,12 @@ end
 
 function go_agro(e) 
 	--debug_status("agro", e)
-	if (rnd(1) < .3) then
-		fire_bullet(e, rnd(2)+2)
+	if (rnd(1) < .3 and e.heat == 0) then
+		if (e.rockets > 0) then
+			fire_rocket(e)
+		else
+			fire_bullet(e, rnd(2)+2)
+		end
 	end
 end
 function check_agro() 
@@ -427,6 +452,7 @@ function _update()
 	set_player_dir_from_buttons()
 
 	update_player()
+	update_ents()
 	update_projectiles()
 	
 	if btn(5) then fire_bullet(player) end
@@ -451,6 +477,18 @@ function update_projectile(b)
 end
 
 function handle_destruction(ent)
+end
+
+function update_ent(ent)
+	if (ent.heat and ent.heat > 0) then
+		ent.heat -= 1
+	end
+end
+
+function update_ents()
+	for r in all(ents) do
+		update_ent(r)
+	end
 end
 
 function update_projectiles()
@@ -601,34 +639,37 @@ end
 function create_projectile(owner_ent, speed)
 		local dx
 		local dy
+
+		local dir = ent_get_aim_dir(owner_ent)
 		
-		dx, dy = dir_to_deltas(ent_get_aim_dir(owner_ent), speed)
+		dx, dy = dir_to_deltas(dir, speed)
 
 		local r = {
 			owner = owner_ent,
 			x = owner_ent.x,
 			y = owner_ent.y,
-			dir = owner_ent.dir,
+			dir = dir,
 			dx = dx,
 			dy = dy
 		}
 		return r
 end
 
-function fire_rocket(owner_ent)
+function fire_rocket(owner_ent, speed)
 	if (owner_ent.rockets > 0) then
 		sfx(2)
 
-		local speed = 6
-		local r = create_projectile(player, speed)
+		speed = speed or 6
+		local r = create_projectile(owner_ent, speed)
 		r.fuel = 7
-		r.damage = player.rocketdamage
-      r.rad = 20
+		r.damage = owner_ent.rocketdamage
+		r.rad = 20
+		owner_ent.heat += owner_ent.rocket_heat
 
 		r.ti = ti_rocket
 		r.explode_when_out_of_fuel = true
 		add(projectiles, r)
-		player.rockets -=1
+		owner_ent.rockets -= 1
 	end
 end
 
@@ -638,6 +679,7 @@ function fire_bullet(owner_ent, speed)
 
 		speed = speed or 4
 		local b = create_projectile(owner_ent, speed)
+		owner_ent.heat += owner_ent.bullet_heat
 		b.fuel = 10
 		b.damage = owner_ent.bulletdamage
 		b.ti = ti_bullet
