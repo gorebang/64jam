@@ -4,6 +4,10 @@
 
 ## Versions
 We're using sematic versioning - http://semver.org/
+### 0.0.11 boats
+* boats
+* bug fixes
+* variable speed bullets
 ### 0.0.10 Items
 * spawn items on the map
 * items can be picked up
