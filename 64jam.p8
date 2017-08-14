@@ -140,7 +140,6 @@ function spawn_random_tank(x, y, r)
 
 	local tank = spawn_fn(i * 8, j * 8)
 	local rand = rnd(1)
-	printh(rand)
 	if (rand < rocket_tank_chance) then
 		set_rocket_stats(tank)
 	end
@@ -182,7 +181,6 @@ end
 function spawn_random_item(x, y)
 	local fns = {spawn_ammo, spawn_fuel, spawn_health}
 	local i = flr(rnd(3)) + 1
-	printh(i)
 	fns[i](x, y)
 end
 
