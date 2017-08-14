@@ -1,17 +1,10 @@
 pico-8 cartridge // http://www.pico-8.com
-version 8
+version 10
 __lua__
 player = {
-	x=84* 8 - 4, 
-	y=40.5* 8 - 4, 
-	dir=5,
-	bullets = 2000,
-	rockets = 16,
-	fuel = 800, 
-	health = 2000,
-	bulletdamage = 55,
-	rocketdamage = 400
 }
+
+debug_mode = false
 
 ent_explosion = "explosion"
 ent_tank = "tank"
@@ -19,7 +12,9 @@ ent_debug = "debug"
 
 -- ti - tile index
 ti_tank = 73
-ti_turret = 105 -- 89
+ti_boat = 121
+ti_turret = 105
+ti_boat_turret = 89
 ti_rocket = 113
 ti_explosion = 116
 ti_fire = 118
@@ -35,6 +30,9 @@ ti_refuel = 34
 ti_dirt = 9
 ti_health = 126
 
+flag_dirt = 1
+flag_water = 4
+
 default_item_spawn_chance = 20  -- 20% chance to spawn item on death
 
 -- clockface directions
@@ -45,7 +43,6 @@ no_dir = 0
 ents = {}
 pickups= {}
 projectiles = {}
-test_tank = {}
 
 started = false
 
@@ -56,6 +53,7 @@ started = false
 function _init()
 	poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
 	cls()
+	init_vars()
 	init_player()
 	init_ents()
 	init_map()
@@ -72,41 +70,81 @@ function init_ents()
 end
 
 
-function init_player()
+function init_vars()
+	ents = {}
+	pickups= {}
+	projectiles = {}
 end
 
+
+function init_player()
+	player = {
+		x=84* 8 - 4, 
+		y=40.5* 8 - 4, 
+		dir=5,
+		bullets = 2000,
+		rockets = 16,
+		fuel = 800, 
+		health = 2000,
+		hostile = true,
+		bulletdamage = 55,
+		rocketdamage = 400
+	}
+end
+
+function is_foo(i, j, flagi)
+	local ti =  mget(i, j)
+	local isdirt = fget(ti, flagi)
+	return isdirt
+end
+
+function is_dirt(i, j)
+	return is_foo(i, j, flag_dirt)
+end
+
+function is_water(i, j)
+	return is_foo(i, j, flag_water)
+end
 
 function spawn_random_tank(x, y, r)
- i = x / 8 
- j = y / 8
+	local i = x / 8 
+	local j = y / 8
 
- local ri = rnd(2*r) - r -- a range of  -r to r tiles
- local rj = rnd(2*r) - r 
+	local ri = rnd(2*r) - r -- a range of  -r to r tiles
+	local rj = rnd(2*r) - r 
 
- i += ri
- j += rj 
- p = {}
- p.x = i * 8
- p.y = j * 8
+	i += ri
+	j += rj 
+	p = {}
+	p.x = i * 8
+	p.y = j * 8
+	local spawn_fn = false
 
-local ti =  mget(i, j)
-local isdirt = fget(ti, 1)
+	if is_dirt(i,j) then
+		spawn_fn = spawn_tank
+	elseif is_water(i,j) then
+		spawn_fn = spawn_boat
+	else
+		return false
+	end
 
-if isdirt then
+	if is_nearby_ent(p) then
+		return false
+	end
 
- for e in all(ents) do
-  if abs(dist2(e, p))  <=  320 then return false end --todo: seems dodgy, shouldn't place any
- end
- spawn_tank(i * 8, j * 8)
- return true
- else
-  return false
+	spawn_fn(i * 8, j * 8)
+	return true
 end
+
+function is_nearby_ent(point) 
+	for e in all(ents) do
+		if dist8(e, p) <= 3 then return true end
+	end
+	return false
 end
 
 -- r - radius
 function spawn_random_tanks(x, y, r, n)
-	-- in progress
 	local count = 0
 	for i = 1, n*2 do
 		if spawn_random_tank(x, y, r) then
@@ -153,21 +191,55 @@ function spawn_health(x, y)
 	item.health = 1000
 	return item
 end
+
+function spawn_boat(x, y)
+	local tank = spawn_ent(ent_boat, x, y, 3)
+	tank.ti = ti_boat
+	tank.turret_ti = ti_boat_turret
+	set_basic_stats(tank)
+	return tank
+end
+
 function spawn_tank(x, y)
 	local tank = spawn_ent(ent_tank, x, y, 3)
 	tank.ti = ti_tank
 	tank.turret_ti = ti_turret
+	set_basic_stats(tank)
+	return tank
+end
+
+-- sets the basic stats for a tank or boat
+function set_basic_stats(tank)
 	tank.turret_dir = 12
 	tank.health = 400
-	tank.agro_range2 = 600  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
+	tank.agro_range8 = 4  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
 	tank.hostile = true
 	tank.bullets = 5000
 	tank.bulletdamage = 15
 	tank.item_spawn_chance = default_item_spawn_chance
-	return tank
+end
+
+
+function debug_status(msg, ent)
+	printh("--------------")
+	printh(msg)
+	printh(trace())
+	printh("ent count: " .. #ents)
+	printh("projectile count: " .. #projectiles)
+	if ent then
+		debug_ent(ent)
+	end
+	printh("")
+	printh("player:")
+	debug_ent(player)
+end
+
+function debug_ent(ent)
+	printh("ent - typ:" .. (ent.typ or "nil") .. " " .. ent.x .. "," .. ent.y)
 end
 
 function spawn_explosion(x,y, item_spawn_chance)
+	--debug_status("spawn explosion " .. x .. "," .. y)
 	if pget(x+4,y + 4) != 12 then	 -- this does a pixel color check at the explosion location to make sure the color isn't blue (water)
 		sfx(3)
 		local exp = spawn_ent(ent_exp, x , y, 12)       
@@ -249,25 +321,28 @@ end
 
 
 
-function dist2(a, b)
-	return (a.x - b.x)^2 + (a.y - b.y)^2
+-- distance in tiles between two ents/projectiles
+function dist8(a, b)
+	local scale = 8  -- sacrifice accuracy to avoid overflowing, return distance in tiles
+	return sqrt((a.x/scale - b.x/scale)^2 + (a.y/scale - b.y/scale)^2)
 end
 
 function go_agro(e) 
---	if e.cool_down < 0 then
-		fire_bullet(e)
---	end
+	--debug_status("agro", e)
+	if (rnd(1) < .3) then
+		fire_bullet(e, rnd(2)+2)
+	end
 end
 function check_agro() 
 	for e in all(ents) do
 		if (e.hostile) then
-			if (e.agro_range2 > abs(dist2(e, player))) then
-        
+			local dist = dist8(e, player)
+			if (e.agro_range8 > dist) then
+				-- printh("dist8 - " .. dist)
 				go_agro(e)
-    
-				--e.turret_ti = ti_arrow
+				if debug_mode then e.turret_ti = ti_arrow end
 			else
-				--e.turret_ti = ti_turret
+				if debug_mode then e.turret_ti = ti_turret end
 			end
 			aim_turret(e, player)
 		end
@@ -334,13 +409,7 @@ end
 -----------------------------------  update calls -------------------------------------------------------
 
 function respawn()
- player.x=84* 8 - 4
- player.y=40.5* 8 - 4
- player.dir=5
- player.bullets = 2000
- player.rockets = 16
- player.fuel = 800
- player.health = 2000
+	init_player()
 end
 
 function _update()
@@ -427,7 +496,7 @@ end
 
 function one_collision_check(r, e, collide_fn)
 	if (r.owner != e) then
-		if abs(dist2(r, e)) < 20 then
+		if dist8(r, e) < 1 then
 			collide_fn(r, e)
 			return true -- nb, can only hit one thing
 		end
@@ -532,7 +601,6 @@ end
 function create_projectile(owner_ent, speed)
 		local dx
 		local dy
-		local speed = 6
 		
 		dx, dy = dir_to_deltas(ent_get_aim_dir(owner_ent), speed)
 
@@ -564,13 +632,13 @@ function fire_rocket(owner_ent)
 	end
 end
 
-function fire_bullet(owner_ent)
+function fire_bullet(owner_ent, speed)
 	if (owner_ent.bullets > 0) then
 		sfx (0)
 
-		local speed = 4
+		speed = speed or 4
 		local b = create_projectile(owner_ent, speed)
-		b.fuel = 8 
+		b.fuel = 10
 		b.damage = owner_ent.bulletdamage
 		b.ti = ti_bullet
 		b.dir = 1
@@ -864,17 +932,17 @@ a090909090909090909090909090a1a1a19090909090a1a190909090909090909090d0e090909090
 a0d3909090909090909090909090a1a190909090909090a1a19090909090909090d0e09090909090909090909090909090909090909090909090d0e090909090
 909090b0c2c290a0a0a0a0a0a0a0a0a0a081909091a0a0a0a0a0a0a0a0a0a0a0a0a0d3909090c1d1e1e182e1e1e1e1e1e1e182e09090909090909090d2a0a0a0
 a0a0d3909090909090908190909090909090909090909090a190909090909090d0e09090909090909090909090909090909090909090909090d0e090f7909090
-909090b0a0a0f0a0a0a0a0a0a0a0a0a0a09020909090a0a0a0a0a0a0a0a0a0a0a0a0a0d39090909090d0e0909090909090d0e090909090909090f190a0a0a0a0
+909090b0a0a0f0a0a0a0a0a0a0a0a0a0a09020909090a0a0a0a0a090a0a0a0a0a0a0a0d39090909090d0e0909090909090d0e090909090909090f190a0a0a0a0
 a0a0a0a0d39090909090909090909090909090909090909090a19090909090d0e09090909090909090909090909090909090909090909090c1d1e1e1e1e1e1e1
-e1e182b1e3a0d3a0a0a0a0a0a0a0a0a0e7e720202090a0a0a0a0a0a0a0a0a0a0a0a0a0a090809090d0e0909090909090d0e090909090909040311050a0a0b2a0
+e1e182b1e3a0d3a0a0f7a0a0a0a0a0a0e7e720202090a0a0a0a0a090a0a0a0a0a0a0a0a090809090d0e0909090909090d0e090909090909040311050a0a0b2a0
 a0a0a0a0a0a0d390d2d3909090909090909090909090909090a190909090d0e09090909090909090909090909090909090909090909090909090909090909090
-90d0e090d2a0a0a0a0a0a0a0a0a0a0a0e79090909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0d39090d0e0909090909090d0e090f0204031509061203090e3a0a0a0
+90d0e090d2a0a0a0a090a0a0a0a0a0a0e79090909090a0a0a0a0a0f7a0a0a0a0a0a0a0a0d39090d0e0909090909090d0e090f0204031509061203090e3a0a0a0
 a0a0a0a0a0a0a0a0a0a0d3909091909090909090909090909090a19090d0e0909090909090909090909090909090909090909090909090909090909090909090
-d0e09090a0a0a0a0a0a0a0a0a0a0a0a0a081909091a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090c1d1e1e182e1e1e1e1e090902030809090902030809090a0a0a0
+d0e09090a0a0a0a0a090a0a0a0a0a0a0a081909091a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090c1d1e1e182e1e1e1e1e090902030809090902030809090a0a0a0
 a0a0a0a0a0a0a0a0a0a0a0a0d390909090909090909090909090a190d0e0909090909090909090909090909090909090909090909090909090909090909090d0
-e0909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090908090d0e090909090f190902131313131314190909090a0a0a0
+e0909090a0a0a0a0a090a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090908090d0e090909090f190902131313131314190909090a0a0a0
 a0a0a0a0a0a0a0a0a0a0a0a0a0d3909090909090909090909090a1d0e0909090909090909090909090909090909090909090909090909090909090909090d0e0
-90909090a0f2a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090f090d0e090909090909090909090909090909090b090f0a0a0a0
+90909090a0f2a0a0a0f7a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090f090d0e090909090909090909090909090909090b090f0a0a0a0
 a0a0a0a0a0a0a0a0a0a0a0a0a0a0d3909090909090909090909090a1909090909090909090909090909090909090909090909090909090909090909090c1d1e1
 82b19090a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0d390d0e09090909090909090d0e1e1e1e1e1e1e1e1e1e1e1b3c2a0
 a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0d39090909090909090909090909090909090909090909090909090909090909090909090909090909090909090909090d0
