@@ -29,9 +29,17 @@ ti_bullet = 112
 ti_flag = 127
 ti_rotor_top = 64  
 ti_rotor_side = 68
+ti_fuel = 24
+ti_ammo = 25
+ti_refuel = 34
+ti_dirt = 9
+ti_health = 126
+
+default_item_spawn_chance = 20  -- 20% chance to spawn item on death
 
 -- clockface directions
 dirs = {12, 1, 3, 5, 6, 7, 9, 10,}
+no_dir = 0
 
 -- ent - entity - anything with a positionreemies, mostly
 ents = {}
@@ -49,8 +57,8 @@ function _init()
 	poke(0x5f2c,3) -- set screen res to 64x64, per the competition rules
 	cls()
 	init_player()
-  init_ents()
-  init_map()
+	init_ents()
+	init_map()
 end
 
 
@@ -110,24 +118,60 @@ function spawn_random_tanks(x, y, r, n)
 	end
 end
 
+function spawn_item(typ, ti, x, y)
+	local item = spawn_ent(ent_ammo, x, y, no_dir)
+	item.ti = ti
+	item.item = true
+	item.bullets = 0
+	item.rockets = 0
+	item.health = 0
+	item.fuel = 0
+	return item
+end
+
+
+function spawn_random_item(x, y)
+	local fns = {spawn_ammo, spawn_fuel, spawn_health}
+	local i = flr(rnd(3)) + 1
+	printh(i)
+	fns[i](x, y)
+end
+
+function spawn_ammo(x, y)
+	local item = spawn_item(ent_ammo, ti_ammo, x, y)
+	item.bullets = 1000
+	item.rockets = 8
+	return item
+end
+function spawn_fuel(x, y)
+	local item = spawn_item(ent_ammo, ti_fuel, x, y)
+	item.fuel = 400
+	return item
+end
+function spawn_health(x, y)
+	local item = spawn_item(ent_ammo, ti_health, x, y)
+	item.health = 1000
+	return item
+end
 function spawn_tank(x, y)
-	local tank = spawn_ent(ent_tank, x, y, 12)
+	local tank = spawn_ent(ent_tank, x, y, 3)
 	tank.ti = ti_tank
-	tank.dir = 3
 	tank.turret_ti = ti_turret
 	tank.turret_dir = 12
 	tank.health = 400
-   tank.agro_range2 = 600  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
+	tank.agro_range2 = 600  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
 	tank.hostile = true
 	tank.bullets = 5000
- tank.bulletdamage = 15
+	tank.bulletdamage = 15
+	tank.item_spawn_chance = default_item_spawn_chance
 	return tank
 end
 
-function spawn_explosion(x,y)
+function spawn_explosion(x,y, item_spawn_chance)
 	if pget(x+4,y + 4) != 12 then	 -- this does a pixel color check at the explosion location to make sure the color isn't blue (water)
 		sfx(3)
 		local exp = spawn_ent(ent_exp, x , y, 12)       
+		exp.item_spawn_chance = item_spawn_chance or 0
 		exp.ti = ti_explosion
 		exp.offset = 0
 		exp.t = 0 --timer
@@ -144,6 +188,7 @@ function spawn_ent(typ, x, y, dir)
 		y = y,
 		dir = dir,
 		typ = typ,
+		item_spawn_chance = 0,
 		hostile = false, --default
 		health = 400,
       rad = 10
@@ -157,11 +202,25 @@ function init_map()
 		for j = 1, 64 do
 		--loop through map and exchange tiles for entities
 			local ti = mget(i,j)
+			local x = i * 8
+			local y = j * 8
 			if ti == ti_flag then
-				local tank = spawn_tank(i*8,j*8)
-           mset(i, j, 9)
+				local tank = spawn_tank(x,y)
+				mset(i, j, ti_dirt)
 				--printh('spawned tank in init_map')
-         spawn_random_tanks(i * 8,j * 8,  6, rnd(2) + 2)
+				spawn_random_tanks(x,y,  6, rnd(2) + 2)
+			end
+			if ti == ti_ammo then
+				local ammo = spawn_ammo(x,y)
+				mset(i, j, ti_dirt)
+			end
+			if ti == ti_health then
+				local ammo = spawn_health(x,y)
+				mset(i, j, ti_dirt)
+			end
+			if ti == ti_fuel then
+				local ammo = spawn_fuel(x,y)
+				mset(i, j, ti_dirt)
 			end
 		end
 	end
@@ -269,6 +328,7 @@ function update_player()
 		player.x += dx
 		player.y += dy
 	end
+	player_collision_check()
 end
 
 -----------------------------------  update calls -------------------------------------------------------
@@ -335,19 +395,40 @@ end
 -----------------------------------  helpers -------------------------------------------------------
 
 
-function collision_check(r)
+-- called when a ent (currently only ever the player) runs over another 'item' (since it is ideally an item)
+function ent_collide(ent, item)
+	if not item.item then return end
+	del(ents, item)
+	-- todo: play sound
+	ent.health += item.health
+	ent.rockets += item.rockets
+	ent.bullets += item.bullets
+end
+
+
+-- check the player running into ents
+function player_collision_check(r)
 	for e in all(ents) do
-		if one_collision_check(r, e) then
+		if one_collision_check(player, e, ent_collide) then
 			return
 		end
 	end
-	one_collision_check(r, player)
 end
 
-function one_collision_check(r, e)
+-- check projectiles running into ents
+function collision_check(r)
+	for e in all(ents) do
+		if one_collision_check(r, e, collide) then
+			return
+		end
+	end
+	one_collision_check(r, player, collide)
+end
+
+function one_collision_check(r, e, collide_fn)
 	if (r.owner != e) then
 		if abs(dist2(r, e)) < 20 then
-			collide(r, e)
+			collide_fn(r, e)
 			return true -- nb, can only hit one thing
 		end
 	end
@@ -361,7 +442,7 @@ function collide(r, e) --check bullets against things
 	end
 	if (e.health <= 0) then
 		del(ents, e)	
-		spawn_explosion(e.x, e.y)		
+		spawn_explosion(e.x, e.y, e.item_spawn_chance)		
 		handle_destruction(ent)
 	end
 end
@@ -519,6 +600,10 @@ function spr_with_dir(ti, x, y, dir)
 	local diag_offset = 0
 	local up_offset = 1
 	local right_offset = 2
+
+	-- no dir, use no offset
+	if (dir == no_dir) then spr(ti,x,y,1,1,false,false)  end
+
 	if (dir == 12) then spr(ti+up_offset,x,y,1,1,false,false) end
 	if (dir == 1) then spr(ti+diag_offset,x,y,1,1,true,false)  end
 	if (dir == 3) then spr(ti+right_offset,x, y) end
@@ -529,6 +614,19 @@ function spr_with_dir(ti, x, y, dir)
 	if (dir == 10) then spr(ti+diag_offset,x,y,1,1,false,false) end
 end
 
+function handle_explosion_end(ent)
+	if (rnd(100) < ent.item_spawn_chance) then
+		-- sometimes, spawn an item
+		spawn_random_item(ent.x, ent.y)
+		del(ents, ent)
+		return
+	else
+		-- turn into fire
+		ent.framecount = 2
+		ent.drawnthframe = 3
+		ent.ti = ti_fire 
+	end
+end
 		
 function draw_animated(ent)
 		spr_with_dir(ent.ti + ent.offset, ent.x, ent.y, ent.dir)	
@@ -543,9 +641,7 @@ function draw_animated(ent)
 			if ent.offset == ent.framecount then 
 				ent.offset = 0
 				if (ent.ti == ti_explosion) then
-					ent.framecount = 2
-					ent.drawnthframe = 3
-					ent.ti = ti_fire 
+					handle_explosion_end(ent)
 				end
 			end  	
 		end
@@ -677,14 +773,14 @@ __gfx__
 00700700ffffffffffffffff6f6fffff6f6fffff6f6fffff0000000000000000ffffff4fffffffffccccccccddddd5ffffd666dfffd666dffffffffffff5ffff
 00000000fffffff6fffffff6f6fffffff6fffffff6ffffff0000000000000000ffffffffffffffffccccccccd1dddffffd666dfffd666dfffffffffffff4ffff
 00000000ffffff6fffffff6f6fffffff6fffffff6fffffff0000000000000000ffffffffffffffffccccccccffffffffd666dfffd666dfffffffffffffffffff
-0000000000000000fffff6f6fffffffffffff6f6f66666ffffffffff666dccccffffffffffffffff66666666ddddfffffffffffd666dddddddddddddffffffff
-0000000000000000ffffdf6f6f6f6f6f6f6fdf6f6ff6ff6fffff3fff66dcccccff99999fffdddddf6666666666dfffffffffffd66666666666666666ffffffff
-0000000000000000ffffd6f6f6f6f6f6f6f6d6fffff6fffffff333ff6ddcccccff97779fffdd7ddf666666666dfffffffffffd666666666666666666ffffffff
-0000000000000000ffffdf6f6f6f6f6f6f6fdffffff6ffffffb3333fdcdcccccff97999fffd7d7df66666666dfffffffffffddddddddddddddddddddffffffff
-0000000000000000fffffffffffffffffffffffffff6fffffbbb33ffccccccccff97799fffd777df66666666ffffffffffffffffffffffffffffffffff66dfff
-0000000000000000fffffffffffffffffffffffffff6fffffb5b3fffccccccccff97999fffd7d7df66666666ffffffffffffffffffffffffffffffffff556fff
-0000000000000000fffffffffffffffffffffffffff6ffffffffffffccccccccff99999fffdddddf66666666ffffffffffffffffffffffffffffffffffffffff
-0000000000000000fffffffffffffffffffffffffff6ffffffffffffccccccccffffffffffffffff66666666ffffffffffffffffffffffffffffffffffffffff
+0000000000000000fffff6f6fffffffffffff6f6f66666ffffffffff666dcccc000000000000000066666666ddddfffffffffffd666dddddddddddddffffffff
+0000000000000000ffffdf6f6f6f6f6f6f6fdf6f6ff6ff6fffff3fff66dccccc0099999000ddddd06666666666dfffffffffffd66666666666666666ffffffff
+0000000000000000ffffd6f6f6f6f6f6f6f6d6fffff6fffffff333ff6ddccccc0097779000dd7dd0666666666dfffffffffffd666666666666666666ffffffff
+0000000000000000ffffdf6f6f6f6f6f6f6fdffffff6ffffffb3333fdcdccccc0097999000d7d7d066666666dfffffffffffddddddddddddddddddddffffffff
+0000000000000000fffffffffffffffffffffffffff6fffffbbb33ffcccccccc0097799000d777d066666666ffffffffffffffffffffffffffffffffff66dfff
+0000000000000000fffffffffffffffffffffffffff6fffffb5b3fffcccccccc0097999000d7d7d066666666ffffffffffffffffffffffffffffffffff556fff
+0000000000000000fffffffffffffffffffffffffff6ffffffffffffcccccccc0099999000ddddd066666666ffffffffffffffffffffffffffffffffffffffff
+0000000000000000fffffffffffffffffffffffffff6ffffffffffffcccccccc000000000000000066666666ffffffffffffffffffffffffffffffffffffffff
 cccccccccccc77777777777777777776666666666666555cffffffffcccccccdddddddddffffffff666dfffdccccccccddddddddfffffffccccccccfcccccccc
 cccccccccc66666666aaa6666666665666666666666555ccf86fffffccccccd666666666fffd666d66dfffd6cccccccc66666666ffffffccccccccffcccccccc
 ccccccccc666666666666666666665566666666666555cccff6ffdddcccccd6666666666ffd666d56dfffd66cccccccc66666666fffffccccccccfffcccccccc
@@ -726,12 +822,12 @@ b3b050000006333b003533003003bc700003b00000d000d060606000d0d000000000000000665000
 05653cb3b330000000b33b00000000000003b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0056b33b0b0000000005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000900880090006000000000000000000005dd000000005d00000000000000000000000000000000000ffffffff
-000000000000000000000000000000000000000000898800060996000000000000000000556d500000556d0000000000000000000000000000000000ffffffff
-00000000000008000000000000000000000000000789987000869800000000000000000056d6650000d6650000000000000000000000000000000000fff5888f
-00000000000000700800080000a7800000099000799799970969996000808000000808000d6666500066d6000d656650000000000000000000000000fff5888f
-000a00000000000a0700070000000000079aa970079aa9700796a970008998000089980000566d6000566d00d6d66d6d000000000000000000000000fff5ffff
-00000000080000000a000a00000a7800007aa7000077a700007aa600008aa800008aa8000005666500d56d0005665650000000000000000000000000fff5ffff
-00000000007000000000000000000000000000000000000000000000000000000000000000005d55006d650000d56d00000000000000000000000000fff5ffff
+000000000000000000000000000000000000000000898800060996000000000000000000556d500000556d0000000000000000000000000000bbbbb0ffffffff
+00000000000008000000000000000000000000000789987000869800000000000000000056d6650000d6650000000000000000000000000000b8b8b0fff5888f
+00000000000000700800080000a7800000099000799799970969996000808000000808000d6666500066d6000d656650000000000000000000b8b8b0fff5888f
+000a00000000000a0700070000000000079aa970079aa9700796a970008998000089980000566d6000566d00d6d66d6d000000000000000000b888b0fff5ffff
+00000000080000000a000a00000a7800007aa7000077a700007aa600008aa800008aa8000005666500d56d0005665650000000000000000000b8b8b0fff5ffff
+00000000007000000000000000000000000000000000000000000000000000000000000000005d55006d650000d56d00000000000000000000bbbbb0fff5ffff
 00000000000a00000000000000000000000000000000000000000000000000000000000000000d5d0006500000000000000000000000000000000000fff5ffff
 a09090909090909020309020309090f0f0f0f0f0f0f0f0f090f0f0f0f0f090909090f0f0f0909090f0f09090909090d0e090f0f0909090909090909090909090
 90909090909090909090d2a0a0a0a0a0a0a0a0a0a0a0a0a0d390909090909090909090909090909090d2a0a0a0a0a0a0a07271a0d3909090f0f090d2a0a0a0a0
@@ -766,15 +862,15 @@ a090909090909090a1a1a1a1a1a1a1a1a1a1909090a190909090909090909090909090d0e0909090
 a090909090909090909090909090a1a1a19090909090a1a190909090909090909090d0e09090909090909090909090909090909090909090909090d0e0909090
 90909090b0b0b0d2a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a09090908090d0e090909090909090908090d0e09090909090909090d2a0a0
 a0d3909090909090909090909090a1a190909090909090a1a19090909090909090d0e09090909090909090909090909090909090909090909090d0e090909090
-909090b0c2c290a0a0a0a0a0a0a0a0a0a090909090a0a0a0a0a0a0a0a0a0a0a0a0a0d3909090c1d1e1e182e1e1e1e1e1e1e182e09090909090909090d2a0a0a0
+909090b0c2c290a0a0a0a0a0a0a0a0a0a081909091a0a0a0a0a0a0a0a0a0a0a0a0a0d3909090c1d1e1e182e1e1e1e1e1e1e182e09090909090909090d2a0a0a0
 a0a0d3909090909090908190909090909090909090909090a190909090909090d0e09090909090909090909090909090909090909090909090d0e090f7909090
 909090b0a0a0f0a0a0a0a0a0a0a0a0a0a09020909090a0a0a0a0a0a0a0a0a0a0a0a0a0d39090909090d0e0909090909090d0e090909090909090f190a0a0a0a0
 a0a0a0a0d39090909090909090909090909090909090909090a19090909090d0e09090909090909090909090909090909090909090909090c1d1e1e1e1e1e1e1
-e1e182b1e3a0d3a0a0a0a0a0a0a0a0a0909020202090a0a0a0a0a0a0a0a0a0a0a0a0a0a090809090d0e0909090909090d0e090909090909040311050a0a0b2a0
+e1e182b1e3a0d3a0a0a0a0a0a0a0a0a0e7e720202090a0a0a0a0a0a0a0a0a0a0a0a0a0a090809090d0e0909090909090d0e090909090909040311050a0a0b2a0
 a0a0a0a0a0a0d390d2d3909090909090909090909090909090a190909090d0e09090909090909090909090909090909090909090909090909090909090909090
-90d0e090d2a0a0a0a0a0a0a0a0a0a0a0909090909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0d39090d0e0909090909090d0e090f0204031509061203090e3a0a0a0
+90d0e090d2a0a0a0a0a0a0a0a0a0a0a0e79090909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0d39090d0e0909090909090d0e090f0204031509061203090e3a0a0a0
 a0a0a0a0a0a0a0a0a0a0d3909091909090909090909090909090a19090d0e0909090909090909090909090909090909090909090909090909090909090909090
-d0e09090a0a0a0a0a0a0a0a0a0a0a0a0a090909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090c1d1e1e182e1e1e1e1e090902030809090902030809090a0a0a0
+d0e09090a0a0a0a0a0a0a0a0a0a0a0a0a081909091a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090c1d1e1e182e1e1e1e1e090902030809090902030809090a0a0a0
 a0a0a0a0a0a0a0a0a0a0a0a0d390909090909090909090909090a190d0e0909090909090909090909090909090909090909090909090909090909090909090d0
 e0909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a090908090d0e090909090f190902131313131314190909090a0a0a0
 a0a0a0a0a0a0a0a0a0a0a0a0a0d3909090909090909090909090a1d0e0909090909090909090909090909090909090909090909090909090909090909090d0e0
