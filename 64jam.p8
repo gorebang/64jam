@@ -608,17 +608,16 @@ end
 -- called when a ent (currently only ever the player) runs over another 'item' (since it is ideally an item)
 function ent_collide(ent, item)
 	if not item.item then return end
- sfx(4)
+i	sfx(4)
 	del(ents, item)
-	-- todo: play sound
 	ent.health += item.health
 	ent.rockets += item.rockets
 	ent.bullets += item.bullets
-   ent.fuel += item.fuel
-   ent.health = min(ent.health, ent.max_health)
-   ent.rockets = min(ent.rockets, ent.max_rockets)
-   ent.bullets = min(ent.bullets, ent.max_bullets)
-   ent.fuel = min(ent.fuel, ent.max_fuel)
+	ent.fuel += item.fuel
+	ent.health = min(ent.health, ent.max_health)
+	ent.rockets = min(ent.rockets, ent.max_rockets)
+	ent.bullets = min(ent.bullets, ent.max_bullets)
+	ent.fuel = min(ent.fuel, ent.max_fuel)
 end
 
 
@@ -1013,6 +1012,14 @@ function draw_copter(x,y)
 		end 
 	end
 end
+------ math helpers
+
+-- from http://pico-8.wikia.com/wiki/Flr
+function ceil(num)
+  return flr(num+0x0.ffff)
+end
+
+
 __gfx__
 00000000fffffffffffffffffffff6f6ffffffffffffffff0000000000000000ffffffffffffffffccccccccff66665ffffffffdfffffffd666dfffffffbfbff
 000000006f6f6f6fffffffffffff6f6fffffdf6f6f6dffff0000000000000000ffff4fffffffffffccccccccf666655fffffffd6ffffffd666dfffffffbbbbbf
