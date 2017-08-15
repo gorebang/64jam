@@ -536,21 +536,44 @@ function _update()
 
 end
 
+function pos_to_tilepos(x, y)
+   i = flr(x / 8 + .5)
+   j = flr(y / 8 + .5)
+   return i, j
+end
+
+function perhaps_spawn_building(x, y)
+	local i, j = pos_to_tilepos(x, y)
+	local ti = mget(i, j)
+	--mset(i, j, ti_arrow)
+	printh("perhaps " .. ti)
+	if ti == ti_building then
+		printh("spawning building")
+		local b = spawn_other(ent_other, ti_building, i*8, j*8)
+		mset(i, j, ti_dirt)
+	end
+end
 
 -- returns true iff the projectile runs out of fuel
 function update_projectile(b)
-		b.x += b.dx
-		b.y += b.dy
-		b.fuel -= 1
+	printh("update")
+	b.x += b.dx
+	b.y += b.dy
 
-		if b.fuel < 0 then
-			del(projectiles, b)
-			if b.explode_when_out_of_fuel then
-				spawn_explosion(b.x, b.y)
-			end
-			return true
+	perhaps_spawn_building(b.x, b.y)
+
+
+
+	b.fuel -= 1
+
+	if b.fuel < 0 then
+		del(projectiles, b)
+		if b.explode_when_out_of_fuel then
+			spawn_explosion(b.x, b.y)
 		end
-		return false
+		return true
+	end
+	return false
 end
 
 function handle_destruction(ent, projectile)
