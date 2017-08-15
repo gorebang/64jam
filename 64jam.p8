@@ -11,6 +11,7 @@ ent_tank = "tank"
 ent_debug = "debug"
 
 rocket_tank_chance = 0.3
+gameover = false
 
 -- ti - tile index
 ti_arrow = 77
@@ -248,7 +249,7 @@ function set_basic_stats(tank)
 	tank.agro_range8 = 4  -- aggrevation range, how close before they try to attack you.  the two is because it's the square of the distance
 	tank.hostile = true
 	tank.bullets = 5000
-	tank.bulletdamage = 15
+	tank.bulletdamage = 35
 	tank.bullet_heat = 2  -- amount of heat firing a bullet costs
 	tank.rocketdamage = false
 	tank.rockets = 0
@@ -326,7 +327,7 @@ function init_map()
 			local y = j * 8
 			if ti == ti_flag then
 				local tank = spawn_tank(x,y)
-				mset(i, j, ti_dirt)
+				--mset(i, j, ti_dirt)
 				--printh('spawned tank in init_map')
 				spawn_random_tanks(x,y,  6, rnd(5) + 2)
 			end
@@ -487,16 +488,33 @@ end
 -----------------------------------  update calls -------------------------------------------------------
 
 function respawn()
-	init_player()
+--	init_player()
+gameover = false
+_init()
+
+end
+
+function die()
+ if gameover == false then
+   spawn_explosion(player.x, player.y)
+ end
+ gameover = true
 
 end
 
 function _update()
-	if started == true then
+
+
+	
+
+ if started == true then
 	sfx (1,3)	
 	end
 
- if player.health <= 0 then respawn() end
+ if player.health <= 0 then 
+   --respawn() 
+   die()
+ end
 
 	if btn(0) or btn(1) or btn(2)
 		or btn(3) or btn (4) or btn(5) then
@@ -504,13 +522,18 @@ function _update()
 	end
 
 	set_player_dir_from_buttons()
+   if (gameover == false) then
+	  update_player()
+     if btn(5) and player.heat == 0 then fire_bullet(player, rnd(2)+2) end
+     if btnp(4) then fire_rocket(player) end
+     update_ents()
+   else 
+     if btn(0,1) then respawn() end
+  end
 
-	update_player()
-	update_ents()
 	update_projectiles()
 	
-	if btn(5) and player.heat == 0 then fire_bullet(player, rnd(2)+2) end
-	if btnp(4) then fire_rocket(player) end
+
 end
 
 
@@ -853,12 +876,16 @@ function _draw()
 
 	draw_ents()
 	draw_projectiles()
-	draw_copter(player.x,player.y)
-	
-	if (player.fuel <= 500) then
-	--	print ("low fuel", player.x - 31, player.y - 25, 8)
+   if (gameover == false) then
+	  draw_copter(player.x,player.y)
+	end
+	if (player.fuel <= 600) then
+ if (gameover == false) then
+		print ("low fuel", player.x - 31, player.y - 20, 10)
+  end
    if (player.fuel <= 0) then
-    respawn()
+  --   respawn()
+    die()
   end
 	end
 
@@ -879,7 +906,11 @@ function _draw()
 end
 
 function drawhud()
-
+   if (gameover == true) then
+     print ("score: " ..player.score, player.x -16, player.y  -24, 7)
+     print ("press 's'", player.x -14, player.y  +26, 8)
+     return
+   end
 	if(started) then 
 --	print ("micro strike", player.x -30, player.y + -30, 14)
 
@@ -890,9 +921,11 @@ function drawhud()
 
    col1x = 30
    col2x = -2
-   rect(player.x -col1x ,  player.y - 29, player.x -col1x + h, player.y -28, 8)
+   if (player.health > 0) then
+     rect(player.x -col1x ,  player.y - 29, player.x -col1x + h, player.y -28, 8)
+   end
    if (player.fuel > 0) then
-   rect(player.x -col1x ,  player.y - 27, player.x -col1x+ f, player.y -26, 10)
+     rect(player.x -col1x ,  player.y - 27, player.x -col1x+ f, player.y -26, 10)
    end
     --    if (player.bullets > 0) then
       --    rect(player.x -col2x ,  player.y +28, player.x -col2x+ player.bullets/5, player.y +27, 6)
@@ -968,7 +1001,7 @@ __gfx__
 00000000ffffff6fffffff6f6fffffff6fffffff6fffffff0000000000000000ffffffffffffffffccccccccffffffffd666dfffd666dfffffffffffffffffff
 0000000000000000fffff6f6fffffffffffff6f6f66666ffffffffff666dcccc000000000000000066666666ddddfffffffffffd666dddddddddddddffffffff
 0000000000000000ffffdf6f6f6f6f6f6f6fdf6f6ff6ff6fffff3fff66dccccc005333b0004494406666666666dfffffffffffd66666666666666666ffffffff
-0000000000000000ffffd6f6f6f6f6f6f6f6d6fffff6fffffff333ff6ddccccc0037773000947490666666666dfffffffffffd666666666666666666ffffffff
+0000000000000000ffffd6f6f6f6f6f6f6f6d6fffff6fffffff333ff6ddccccc0037773000977790666666666dfffffffffffd666666666666666666ffffffff
 0000000000000000ffffdf6f6f6f6f6f6f6fdffffff6ffffffb3333fdcdccccc005733b00047474066666666dfffffffffffddddddddddddddddddddffffffff
 0000000000000000fffffffffffffffffffffffffff6fffffbbb33ffcccccccc003773300047774066666666ffffffffffffffffffffffffffffffffff66dfff
 0000000000000000fffffffffffffffffffffffffff6fffffb5b3fffcccccccc005733b00097479066666666ffffffffffffffffffffffffffffffffff556fff
@@ -1016,12 +1049,12 @@ b3b050000006333b003533003003bc700003b00000d000d060606000d0d000000000000000bb5000
 0056b33b0b0000000005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000090088009000600000000000000000000666000000006600000000000000000000000000000000000ffffffff
 0000000000000000000000000000000000000000008988000609960000000000000000006666600000d6660000000000000000000000000006777600ffffffff
-000000000000080000000000000000000000000007899870008698000000000000000000d666660000d6660000000000000000000000000007787700fff5888f
-00000000000000700800080000a7800000099000799799970969996000808000000808000d66666000d6660006666660000000000000000007888700fff5888f
-000700000000000a0700070000000000079aa970079aa9700796a970008998000089980000d6666000d66600d6666666000000000000000007787700fff5ffff
-00000000080000000a000a00000a7800007aa7000077a700007aa600008aa800008aa800000d666600d666000dddddd0000000000000000006777600fff5ffff
-0000000000700000000000000000000000000000000000000000000000000000000000000000d66600dd660000000000000000000000000000000000fff5ffff
-00000000000a00000000000000000000000000000000000000000000000000000000000000000ddd000dd00000000000000000000000000000000000fff5ffff
+000000000000080000000000000000000000000007899870008698000000000000000000d666660000d6660000000000000000000000000007787700ffffffff
+00000000000000700800080000a7800000099000799799970969996000808000000808000d66666000d6660006666660000000000000000007888700ffffffff
+000700000000000a0700070000000000079aa970079aa9700796a970008998000089980000d6666000d66600d6666666000000000000000007787700ffffffff
+00000000080000000a000a00000a7800007aa7000077a700007aa600008aa800008aa800000d666600d666000dddddd0000000000000000006777600ffffffff
+0000000000700000000000000000000000000000000000000000000000000000000000000000d66600dd660000000000000000000000000000000000ffffffff
+00000000000a00000000000000000000000000000000000000000000000000000000000000000ddd000dd00000000000000000000000000000000000fff4ffff
 a09090909090909020309020309090f0f0f0f0f0f0f0f0f090f0f0f0f0f090909090f0f0f0909090f0f09090909090d0e090f0f0909090909090909090909090
 90909090909090909090d2a0a0a0a0a0a0a0a0a0a0a0a0a0d390909090909090909090f09090909090d2a0a0a0a0a0a0a07271a0d3909090f0f090d2a0a0a0a0
 a0d390909090902030902030909090f0f0f0f090f093f0f0f0909090909090909090f0f0f0f090f0f0f090909090d0e090f0f090909090909090909090909090
