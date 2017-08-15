@@ -94,7 +94,11 @@ function init_player()
 		rocketdamage = 400,
 		bullet_heat = 3,
 		rocket_heat = 0,
+      max_health = 3000,
+      max_bullets = 3000,
+      max_rockets = 24,
 		heat = 0,
+      score = 0
 	}
 end
 
@@ -231,6 +235,7 @@ function set_basic_stats(tank)
 	tank.bullet_heat = 2  -- amount of heat firing a bullet costs
 	tank.rocketdamage = false
 	tank.rockets = 0
+   tank.points = 100
 	tank.item_spawn_chance = default_item_spawn_chance
 	tank.heat = 0 -- how hot the tank is (how long it has to wait before firing again)
 end
@@ -239,6 +244,7 @@ end
 function set_rocket_stats(tank)
 	tank.rocketdamage = 400
 	tank.rockets = 10 --nb, they will start firing bullets when they run out of rockets
+   tank.points = 250
 	tank.turret_ti = ti_rocket_turret
 	tank.rocket_heat = 20
 end
@@ -482,7 +488,10 @@ function update_projectile(b)
 		return false
 end
 
-function handle_destruction(ent)
+function handle_destruction(ent, projectile)
+ if ent.points and projectile.owner_ent == player then
+   player.score += ent.points
+ end
 end
 
 function update_ent(ent)
@@ -516,6 +525,9 @@ function ent_collide(ent, item)
 	ent.health += item.health
 	ent.rockets += item.rockets
 	ent.bullets += item.bullets
+   ent.health = min(ent.health, ent.max_health)
+   ent.rockets = min(ent.rockets, ent.max_rockets)
+   ent.bullets = min(ent.bullets, ent.max_bullets)
 end
 
 
@@ -539,7 +551,7 @@ function collision_check(r)
 end
 
 function one_collision_check(r, e, collide_fn)
-	if (r.owner != e) then
+	if (r.owner_ent != e) then
 		if dist8(r, e) < 1 then
 			collide_fn(r, e)
 			return true -- nb, can only hit one thing
@@ -554,9 +566,10 @@ function collide(r, e) --check bullets against things
 		del(projectiles, r)
 	end
 	if (e.health <= 0) then
+
 		del(ents, e)	
 		spawn_explosion(e.x, e.y, e.item_spawn_chance)		
-		handle_destruction(ent)
+		handle_destruction(e, r)
 	end
 end
 
@@ -651,7 +664,7 @@ function create_projectile(owner_ent, speed)
 		dx, dy = dir_to_deltas(dir, speed)
 
 		local r = {
-			owner = owner_ent,
+			owner_ent = owner_ent,
 			x = owner_ent.x,
 			y = owner_ent.y,
 			dir = dir,
@@ -830,7 +843,7 @@ function drawhud()
 	if(started) then 
 --	print ("micro strike", player.x -30, player.y + -30, 14)
 
-			print ("‡" .. player.health .. " a" ..player.rockets .. "/" .. player.bullets, player.x -32, player.y + -31, 7)
+			print ("‡" .. player.health .. " a" ..player.score, player.x -32, player.y + -31, 7)
 	end
 
 end
