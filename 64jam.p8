@@ -56,6 +56,8 @@ projectiles = {}
 buildings = {}  -- buildings are stored in ents and also here
 max_buildings = 10  -- old buildings are removed if more than 10 are spawned, this is for collsion performance
 
+map_patch = {} -- ents to return to the map on a reset
+
 started = false
 
 
@@ -302,7 +304,6 @@ function spawn_explosion(x,y, item_spawn_chance)
 	end
 end
 
-
 -- create an entity
 function spawn_ent(typ, x, y, dir)
 	local ent = {
@@ -319,7 +320,21 @@ function spawn_ent(typ, x, y, dir)
 	return ent
 end
 
+-- return to the map anything that's been changed on it (reverse of dirtifiy)
+function patch_map()
+	for k,v in pairs(map_patch) do
+		replace_building(v)
+	end
+end
+
+-- replace a tile with dirt, and store the tile to replace it with on reset
+function dirtify(ent, i, j)
+	add(map_patch, ent)
+	mset(i, j, ti_dirt)
+end
+
 function init_map()
+	patch_map()
 	for i = 1, 128 do 
 		for j = 1, 64 do
 		--loop through map and exchange tiles for entities
@@ -332,15 +347,15 @@ function init_map()
 			end
 			if ti == ti_ammo then
 				local ammo = spawn_ammo(x,y)
-				mset(i, j, ti_dirt)
+				dirtify(ammo, i, j)
 			end
 			if ti == ti_health then
 				local ammo = spawn_health(x,y)
-				mset(i, j, ti_dirt)
+				dirtify(ammo, i, j)
 			end
 			if ti == ti_fuel then
 				local ammo = spawn_fuel(x,y)
-				mset(i, j, ti_dirt)
+				dirtify(ammo, i, j)
 			end
    
 
@@ -531,10 +546,10 @@ function add_building(ent)
 	end
 end
 
+-- returns an ent to the map
 function replace_building(ent)
 	local i, j = pos_to_tilepos(ent.x, ent.y)
 	mset(i, j, ent.ti)
-	--mset(i, j, ti_arrow)
 end
 
 -- spawn a building if there's a building on the map at x,y
@@ -553,10 +568,11 @@ function perhaps_spawn_building(x, y)
 	end
 end
 
+-- pulls a build off the map into an ent
 function spawn_building(ti, i, j)
-	local b = spawn_other(ent_other, ti_building, i*8, j*8)
+	local b = spawn_other(ent_other, ti, i*8, j*8)
 	add_building(b)
-	mset(i, j, ti_dirt)
+	dirtify(b, i, j)
 end
 
 -- returns true iff the projectile runs out of fuel
