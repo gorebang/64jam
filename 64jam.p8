@@ -495,18 +495,14 @@ function die()
 end
 
 function _update()
-
-
-	
-
- if started == true then
-	sfx (1,3)	
+	if started == true then
+		sfx (1,3)	
 	end
 
- if player.health <= 0 then 
-   --respawn() 
-   die()
- end
+	if player.health <= 0 then 
+		--respawn() 
+		die()
+	end
 
 	if btn(0) or btn(1) or btn(2)
 		or btn(3) or btn (4) or btn(5) then
@@ -514,17 +510,17 @@ function _update()
 	end
 
 	set_player_dir_from_buttons()
-   if (gameover == false) then
-	  update_player()
-     if btn(5) and player.heat == 0 then fire_bullet(player, rnd(2)+2) end
-     if btnp(4) then fire_rocket(player) end
-     update_ents()
-   else 
-     if btn(0,1) then respawn() end
-  end
+
+	if (gameover == false) then
+		update_player()
+		if btn(5) and player.heat == 0 then fire_bullet(player, rnd(2)+2) end
+		if btnp(4) then fire_rocket(player) end
+		update_ents()
+	else 
+		if btn(0,1) then respawn() end
+	end
 
 	update_projectiles()
-	
 
 end
 
