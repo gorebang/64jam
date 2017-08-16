@@ -53,6 +53,8 @@ no_dir = 0
 ents = {}
 pickups= {}
 projectiles = {}
+buildings = {}  -- buildings are stored in ents and also here
+max_buildings = 10  -- old buildings are removed if more than 10 are spawned, this is for collsion performance
 
 started = false
 
@@ -542,21 +544,38 @@ function pos_to_tilepos(x, y)
    return i, j
 end
 
+function add_building(ent)
+	add(buildings, ent)
+	if (#buildings > max_buildings) then
+		printh("removing old building")
+		local oldbuilding = buildings[1]
+		del(buildings, oldbuilding)
+		del(ents, oldbuilding)
+		replace_building(oldbuilding)
+	end
+end
+
+function replace_building(ent)
+	local i, j = pos_to_tilepos(ent.x, ent.y)
+	mset(i, j, ent.ti)
+	--mset(i, j, ti_arrow)
+end
+
 function perhaps_spawn_building(x, y)
 	local i, j = pos_to_tilepos(x, y)
 	local ti = mget(i, j)
 	--mset(i, j, ti_arrow)
-	printh("perhaps " .. ti)
+	--printh("perhaps " .. ti)
 	if ti == ti_building then
-		printh("spawning building")
+		printh("spawning building".. #ents)
 		local b = spawn_other(ent_other, ti_building, i*8, j*8)
+		add_building(b)
 		mset(i, j, ti_dirt)
 	end
 end
 
 -- returns true iff the projectile runs out of fuel
 function update_projectile(b)
-	printh("update")
 	b.x += b.dx
 	b.y += b.dy
 
@@ -577,9 +596,9 @@ function update_projectile(b)
 end
 
 function handle_destruction(ent, projectile)
- if ent.points and projectile.owner_ent == player then
-   player.score += ent.points
- end
+	if ent.points and projectile.owner_ent == player then
+		player.score += ent.points
+	end
 end
 
 function update_ent(ent)
@@ -608,7 +627,7 @@ end
 -- called when a ent (currently only ever the player) runs over another 'item' (since it is ideally an item)
 function ent_collide(ent, item)
 	if not item.item then return end
-i	sfx(4)
+	sfx(4)
 	del(ents, item)
 	ent.health += item.health
 	ent.rockets += item.rockets
@@ -658,6 +677,7 @@ function collide(r, e) --check bullets against things
 	if (e.health <= 0) then
 
 		del(ents, e)	
+		del(buildings, e)
 		spawn_explosion(e.x, e.y, e.item_spawn_chance)		
 		handle_destruction(e, r)
 	end
