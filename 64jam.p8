@@ -104,12 +104,12 @@ function init_player()
 		rocketdamage = 400,
 		bullet_heat = 3,
 		rocket_heat = 0,
-      max_health = 2500,
-      max_bullets = 150,
-      max_fuel = 2500,
-      max_rockets = 24,
+		max_health = 2500,
+		max_bullets = 150,
+		max_fuel = 2500,
+		max_rockets = 24,
 		heat = 0,
-      score = 0
+		score = 0
 	}
 end
 
@@ -948,14 +948,14 @@ end
 
 function drawhud()
    if (gameover == true) then
-     print ("score: " ..player.score, player.x -16, player.y  -24, 7)
+     print ("score: " ..player.score, player.x - 16, player.y - 24, 7)
      print ("press 's'", player.x -14, player.y  +26, 8)
      return
    end
 	if(started) then 
 --	print ("micro strike", player.x -30, player.y + -30, 14)
 
-	print (player.score, player.x +16, player.y  -31, 7)
+	print (player.score, player.x + 12, player.y - 31, 7)
    print ("„ "..player.rockets .. " "..player.bullets, player.x -30, player.y + 25, 13)
    local h= player.health / 100, 0
    local f = player.fuel/ 100
