@@ -53,6 +53,10 @@ no_dir = 0
 ents = {}
 pickups= {}
 projectiles = {}
+buildings = {}  -- buildings are stored in ents and also here
+max_buildings = 10  -- old buildings are removed if more than 10 are spawned, this is for collsion performance
+
+map_patch = {} -- ents to return to the map on a reset
 
 started = false
 
@@ -75,7 +79,6 @@ function init_ents()
 	test_direction_draw_code(ti_, 1)
 	test_direction_draw_code(ti_tank, 3)
 	test_tank(ti_tank, 8)
-	printh("init_ents")
 
 end
 
@@ -301,7 +304,6 @@ function spawn_explosion(x,y, item_spawn_chance)
 	end
 end
 
-
 -- create an entity
 function spawn_ent(typ, x, y, dir)
 	local ent = {
@@ -318,7 +320,21 @@ function spawn_ent(typ, x, y, dir)
 	return ent
 end
 
+-- return to the map anything that's been changed on it (reverse of dirtifiy)
+function patch_map()
+	for k,v in pairs(map_patch) do
+		replace_building(v)
+	end
+end
+
+-- replace a tile with dirt, and store the tile to replace it with on reset
+function dirtify(ent, i, j)
+	add(map_patch, ent)
+	mset(i, j, ti_dirt)
+end
+
 function init_map()
+	patch_map()
 	for i = 1, 128 do 
 		for j = 1, 64 do
 		--loop through map and exchange tiles for entities
@@ -327,43 +343,20 @@ function init_map()
 			local y = j * 8
 			if ti == ti_flag then
 				local tank = spawn_tank(x,y)
-				--mset(i, j, ti_dirt)
-				--printh('spawned tank in init_map')
 				spawn_random_tanks(x,y,  6, rnd(5) + 2)
 			end
 			if ti == ti_ammo then
 				local ammo = spawn_ammo(x,y)
-				mset(i, j, ti_dirt)
+				dirtify(ammo, i, j)
 			end
 			if ti == ti_health then
 				local ammo = spawn_health(x,y)
-				mset(i, j, ti_dirt)
+				dirtify(ammo, i, j)
 			end
 			if ti == ti_fuel then
 				local ammo = spawn_fuel(x,y)
-				mset(i, j, ti_dirt)
+				dirtify(ammo, i, j)
 			end
-   --cool, but slows the game too much
-   --      if ti == ti_building then
-   --         local b = spawn_other(ent_other, ti_building, x, y)
-    --       mset(i, j, ti_dirt)
-    --     end
-    --     if ti == ti_tent then
-    --       local b = spawn_other(ent_other, ti_tent, x, y)
-    --       mset(i, j, ti_dirt)
-    --     end
-    --     if ti == ti_shed then
-    --       local b = spawn_other(ent_other, ti_shed, x, y)
-    --       mset(i, j, ti_dirt)
-    --     end
-    --     if ti == ti_booth then
-    --       local b = spawn_other(ent_other, ti_booth, x, y)
-    --       mset(i, j, ti_dirt)
-    --     end
-    --     if ti == ti_cargonet then
-     --      local b = spawn_other(ent_other, ti_cargonet, x, y)
-     --      mset(i, j, ti_dirt)
-      --   end
    
 
 		end
@@ -414,7 +407,6 @@ function check_agro()
 		if (e.hostile) then
 			local dist = dist8(e, player)
 			if (e.agro_range8 > dist) then
-				-- printh("dist8 - " .. dist)
 				go_agro(e)
 				if debug_mode then e.turret_ti = ti_arrow end
 			else
@@ -536,27 +528,76 @@ function _update()
 
 end
 
+function pos_to_tilepos(x, y)
+   i = flr(x / 8 + .5)
+   j = flr(y / 8 + .5)
+   return i, j
+end
+
+-- adds a bulding to the buldings table, possibly demoting an old building from ents to map
+function add_building(ent)
+	add(buildings, ent)
+	if (#buildings > max_buildings) then
+		-- remove old buildings (basically, reset their damage)
+		local oldbuilding = buildings[1]
+		del(buildings, oldbuilding)
+		del(ents, oldbuilding)
+		replace_building(oldbuilding)
+	end
+end
+
+-- returns an ent to the map
+function replace_building(ent)
+	local i, j = pos_to_tilepos(ent.x, ent.y)
+	mset(i, j, ent.ti)
+end
+
+-- spawn a building if there's a building on the map at x,y
+function perhaps_spawn_building(x, y)
+	spawnable = {
+		[ti_building] = 1,
+		[ti_tent] = 1,
+		[ti_shed] = 1,
+		[ti_booth] = 1,
+		[ti_cargonet] = 1,
+	}
+	local i, j = pos_to_tilepos(x, y)
+	local ti = mget(i, j)
+	if spawnable[ti] then
+		spawn_building(ti, i, j)
+	end
+end
+
+-- pulls a build off the map into an ent
+function spawn_building(ti, i, j)
+	local b = spawn_other(ent_other, ti, i*8, j*8)
+	add_building(b)
+	dirtify(b, i, j)
+end
 
 -- returns true iff the projectile runs out of fuel
 function update_projectile(b)
-		b.x += b.dx
-		b.y += b.dy
-		b.fuel -= 1
+	b.x += b.dx
+	b.y += b.dy
 
-		if b.fuel < 0 then
-			del(projectiles, b)
-			if b.explode_when_out_of_fuel then
-				spawn_explosion(b.x, b.y)
-			end
-			return true
+	perhaps_spawn_building(b.x, b.y)
+
+	b.fuel -= 1
+
+	if b.fuel < 0 then
+		del(projectiles, b)
+		if b.explode_when_out_of_fuel then
+			spawn_explosion(b.x, b.y)
 		end
-		return false
+		return true
+	end
+	return false
 end
 
 function handle_destruction(ent, projectile)
- if ent.points and projectile.owner_ent == player then
-   player.score += ent.points
- end
+	if ent.points and projectile.owner_ent == player then
+		player.score += ent.points
+	end
 end
 
 function update_ent(ent)
@@ -585,17 +626,16 @@ end
 -- called when a ent (currently only ever the player) runs over another 'item' (since it is ideally an item)
 function ent_collide(ent, item)
 	if not item.item then return end
- sfx(4)
+	sfx(4)
 	del(ents, item)
-	-- todo: play sound
 	ent.health += item.health
 	ent.rockets += item.rockets
 	ent.bullets += item.bullets
-   ent.fuel += item.fuel
-   ent.health = min(ent.health, ent.max_health)
-   ent.rockets = min(ent.rockets, ent.max_rockets)
-   ent.bullets = min(ent.bullets, ent.max_bullets)
-   ent.fuel = min(ent.fuel, ent.max_fuel)
+	ent.fuel += item.fuel
+	ent.health = min(ent.health, ent.max_health)
+	ent.rockets = min(ent.rockets, ent.max_rockets)
+	ent.bullets = min(ent.bullets, ent.max_bullets)
+	ent.fuel = min(ent.fuel, ent.max_fuel)
 end
 
 
@@ -636,6 +676,7 @@ function collide(r, e) --check bullets against things
 	if (e.health <= 0) then
 
 		del(ents, e)	
+		del(buildings, e)
 		spawn_explosion(e.x, e.y, e.item_spawn_chance)		
 		handle_destruction(e, r)
 	end
@@ -990,6 +1031,14 @@ function draw_copter(x,y)
 		end 
 	end
 end
+------ math helpers
+
+-- from http://pico-8.wikia.com/wiki/Flr
+function ceil(num)
+  return flr(num+0x0.ffff)
+end
+
+
 __gfx__
 00000000fffffffffffffffffffff6f6ffffffffffffffff0000000000000000ffffffffffffffffccccccccff66665ffffffffdfffffffd666dfffffffbfbff
 000000006f6f6f6fffffffffffff6f6fffffdf6f6f6dffff0000000000000000ffff4fffffffffffccccccccf666655fffffffd6ffffffd666dfffffffbbbbbf
@@ -1049,9 +1098,9 @@ b3b050000006333b003533003003bc700003b00000d000d060606000d0d000000000000000bb5000
 0056b33b0b0000000005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000090088009000600000000000000000000666000000006600000000000000000000000000000000000ffffffff
 0000000000000000000000000000000000000000008988000609960000000000000000006666600000d6660000000000000000000000000006777600ffffffff
-000000000000080000000000000000000000000007899870008698000000000000000000d666660000d6660000000000000000000000000007787700ffffffff
-00000000000000700800080000a7800000099000799799970969996000808000000808000d66666000d6660006666660000000000000000007888700ffffffff
-000700000000000a0700070000000000079aa970079aa9700796a970008998000089980000d6666000d66600d6666666000000000000000007787700ffffffff
+000000000000080000000000000000000000000007899870008698000000000000000000d666660000d66600000000000000000000000000077b7700ffffffff
+00000000000000700800080000a7800000099000799799970969996000808000000808000d66666000d6660006666660000000000000000007bbb700ffffffff
+000700000000000a0700070000000000079aa970079aa9700796a970008998000089980000d6666000d66600d66666660000000000000000077b7700ffffffff
 00000000080000000a000a00000a7800007aa7000077a700007aa600008aa800008aa800000d666600d666000dddddd0000000000000000006777600ffffffff
 0000000000700000000000000000000000000000000000000000000000000000000000000000d66600dd660000000000000000000000000000000000ffffffff
 00000000000a00000000000000000000000000000000000000000000000000000000000000000ddd000dd00000000000000000000000000000000000fff4ffff
