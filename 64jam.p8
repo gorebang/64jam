@@ -955,7 +955,7 @@ function drawhud()
 	if(started) then 
 --	print ("micro strike", player.x -30, player.y + -30, 14)
 
-	print (player.score, player.x +16, player.y  -31, 7)
+	print (player.score, player.x +12, player.y  -31, 7)
    print ("„ "..player.rockets .. " "..player.bullets, player.x -30, player.y + 25, 13)
    local h= player.health / 100, 0
    local f = player.fuel/ 100
@@ -1033,7 +1033,7 @@ function draw_copter(x,y)
 end
 ------ math helpers
 
--- from http://pico-8.wikia.com/wiki/Flr
+-- from http://pico-8.wikia.com/wiki/flr
 function ceil(num)
   return flr(num+0x0.ffff)
 end
