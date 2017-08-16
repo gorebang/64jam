@@ -1046,7 +1046,7 @@ function draw_copter(x,y)
 end
 ------ math helpers
 
--- from http://pico-8.wikia.com/wiki/Flr
+-- from http://pico-8.wikia.com/wiki/flr
 function ceil(num)
   return flr(num+0x0.ffff)
 end
