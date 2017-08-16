@@ -77,7 +77,6 @@ function init_ents()
 	test_direction_draw_code(ti_, 1)
 	test_direction_draw_code(ti_tank, 3)
 	test_tank(ti_tank, 8)
-	printh("init_ents")
 
 end
 
@@ -329,8 +328,6 @@ function init_map()
 			local y = j * 8
 			if ti == ti_flag then
 				local tank = spawn_tank(x,y)
-				--mset(i, j, ti_dirt)
-				--printh('spawned tank in init_map')
 				spawn_random_tanks(x,y,  6, rnd(5) + 2)
 			end
 			if ti == ti_ammo then
@@ -345,27 +342,6 @@ function init_map()
 				local ammo = spawn_fuel(x,y)
 				mset(i, j, ti_dirt)
 			end
-   --cool, but slows the game too much
-   --      if ti == ti_building then
-   --         local b = spawn_other(ent_other, ti_building, x, y)
-    --       mset(i, j, ti_dirt)
-    --     end
-    --     if ti == ti_tent then
-    --       local b = spawn_other(ent_other, ti_tent, x, y)
-    --       mset(i, j, ti_dirt)
-    --     end
-    --     if ti == ti_shed then
-    --       local b = spawn_other(ent_other, ti_shed, x, y)
-    --       mset(i, j, ti_dirt)
-    --     end
-    --     if ti == ti_booth then
-    --       local b = spawn_other(ent_other, ti_booth, x, y)
-    --       mset(i, j, ti_dirt)
-    --     end
-    --     if ti == ti_cargonet then
-     --      local b = spawn_other(ent_other, ti_cargonet, x, y)
-     --      mset(i, j, ti_dirt)
-      --   end
    
 
 		end
@@ -416,7 +392,6 @@ function check_agro()
 		if (e.hostile) then
 			local dist = dist8(e, player)
 			if (e.agro_range8 > dist) then
-				-- printh("dist8 - " .. dist)
 				go_agro(e)
 				if debug_mode then e.turret_ti = ti_arrow end
 			else
@@ -544,10 +519,11 @@ function pos_to_tilepos(x, y)
    return i, j
 end
 
+-- adds a bulding to the buldings table, possibly demoting an old building from ents to map
 function add_building(ent)
 	add(buildings, ent)
 	if (#buildings > max_buildings) then
-		printh("removing old building")
+		-- remove old buildings (basically, reset their damage)
 		local oldbuilding = buildings[1]
 		del(buildings, oldbuilding)
 		del(ents, oldbuilding)
@@ -561,17 +537,26 @@ function replace_building(ent)
 	--mset(i, j, ti_arrow)
 end
 
+-- spawn a building if there's a building on the map at x,y
 function perhaps_spawn_building(x, y)
+	spawnable = {
+		[ti_building] = 1,
+		[ti_tent] = 1,
+		[ti_shed] = 1,
+		[ti_booth] = 1,
+		[ti_cargonet] = 1,
+	}
 	local i, j = pos_to_tilepos(x, y)
 	local ti = mget(i, j)
-	--mset(i, j, ti_arrow)
-	--printh("perhaps " .. ti)
-	if ti == ti_building then
-		printh("spawning building".. #ents)
-		local b = spawn_other(ent_other, ti_building, i*8, j*8)
-		add_building(b)
-		mset(i, j, ti_dirt)
+	if spawnable[ti] then
+		spawn_building(ti, i, j)
 	end
+end
+
+function spawn_building(ti, i, j)
+	local b = spawn_other(ent_other, ti_building, i*8, j*8)
+	add_building(b)
+	mset(i, j, ti_dirt)
 end
 
 -- returns true iff the projectile runs out of fuel
@@ -580,8 +565,6 @@ function update_projectile(b)
 	b.y += b.dy
 
 	perhaps_spawn_building(b.x, b.y)
-
-
 
 	b.fuel -= 1
 
