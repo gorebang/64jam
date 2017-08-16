@@ -128,7 +128,7 @@ function is_water(i, j)
 	return is_foo(i, j, flag_water)
 end
 
-function spawn_random_tank(x, y, r)
+function spawn_random_tank(x, y, r, dir)
 r = 4
 	local i = x / 8 
 	local j = y / 8
@@ -158,6 +158,7 @@ r = 4
 	end
 
 	local tank = spawn_fn(i * 8, j * 8)
+	tank.dir = dir
 	local rand = rnd(1)
 	if (rand < rocket_tank_chance) then
 		set_rocket_stats(tank)
@@ -175,8 +176,10 @@ end
 -- r - radius
 function spawn_random_tanks(x, y, r, n)
 	local count = 0
+	tank_dirs = {12, 1, 3}
+	dir = tank_dirs[flr(rnd(#tank_dirs) + 1)]
 	for i = 1, n*2 do
-		if spawn_random_tank(x, y, r) then
+		if spawn_random_tank(x, y, r, dir) then
 			count += 1
 		end
 		if count >= n then
