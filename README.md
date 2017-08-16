@@ -5,7 +5,10 @@
 ## Versions
 We're using sematic versioning - http://semver.org/
 
-###0.0.13
+### 0.0.14
+* dynamic building enting
+* ring buffer for buildings
+### 0.0.13
 * Fixed Twitchy sprites
 * Added rocket turret sprite
 * More level art
