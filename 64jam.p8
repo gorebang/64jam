@@ -59,6 +59,7 @@ max_buildings = 10  -- old buildings are removed if more than 10 are spawned, th
 map_patch = {} -- ents to return to the map on a reset
 
 started = false
+nearby_ents = {}
 
 
 
@@ -104,12 +105,12 @@ function init_player()
 		rocketdamage = 400,
 		bullet_heat = 3,
 		rocket_heat = 0,
-      max_health = 2500,
-      max_bullets = 150,
-      max_fuel = 2500,
-      max_rockets = 24,
+		max_health = 2500,
+		max_bullets = 150,
+		max_fuel = 2500,
+		max_rockets = 24,
 		heat = 0,
-      score = 0
+		score = 0
 	}
 end
 
@@ -127,7 +128,7 @@ function is_water(i, j)
 	return is_foo(i, j, flag_water)
 end
 
-function spawn_random_tank(x, y, r)
+function spawn_random_tank(x, y, r, dir)
 r = 4
 	local i = x / 8 
 	local j = y / 8
@@ -157,6 +158,7 @@ r = 4
 	end
 
 	local tank = spawn_fn(i * 8, j * 8)
+	tank.dir = dir
 	local rand = rnd(1)
 	if (rand < rocket_tank_chance) then
 		set_rocket_stats(tank)
@@ -174,8 +176,10 @@ end
 -- r - radius
 function spawn_random_tanks(x, y, r, n)
 	local count = 0
+	tank_dirs = {12, 1, 3}
+	dir = tank_dirs[flr(rnd(#tank_dirs) + 1)]
 	for i = 1, n*2 do
-		if spawn_random_tank(x, y, r) then
+		if spawn_random_tank(x, y, r, dir) then
 			count += 1
 		end
 		if count >= n then
@@ -495,18 +499,14 @@ function die()
 end
 
 function _update()
-
-
-	
-
- if started == true then
-	sfx (1,3)	
+	if started == true then
+		sfx (1,3)	
 	end
 
- if player.health <= 0 then 
-   --respawn() 
-   die()
- end
+	if player.health <= 0 then 
+		--respawn() 
+		die()
+	end
 
 	if btn(0) or btn(1) or btn(2)
 		or btn(3) or btn (4) or btn(5) then
@@ -514,18 +514,30 @@ function _update()
 	end
 
 	set_player_dir_from_buttons()
-   if (gameover == false) then
-	  update_player()
-     if btn(5) and player.heat == 0 then fire_bullet(player, rnd(2)+2) end
-     if btnp(4) then fire_rocket(player) end
-     update_ents()
-   else 
-     if btn(0,1) then respawn() end
-  end
 
+	if (gameover == false) then
+		update_player()
+		if btn(5) and player.heat == 0 then fire_bullet(player, rnd(2)+2) end
+		if btnp(4) then fire_rocket(player) end
+		update_ents()
+	else 
+		if btn(0,1) then respawn() end
+	end
+
+	update_near_ents()
 	update_projectiles()
-	
 
+end
+
+-- ents that are near enough to the player to be worth checking for collisions
+function update_near_ents()
+	near_enough = 10
+	near_ents = {}
+	for k,ent in pairs(ents) do
+		if (dist8(player, ent) < near_enough) then
+			add(near_ents, ent)
+		end
+	end
 end
 
 function pos_to_tilepos(x, y)
@@ -650,7 +662,7 @@ end
 
 -- check projectiles running into ents
 function collision_check(r)
-	for e in all(ents) do
+	for e in all(near_ents) do
 		if one_collision_check(r, e, collide) then
 			return
 		end
@@ -948,14 +960,14 @@ end
 
 function drawhud()
    if (gameover == true) then
-     print ("score: " ..player.score, player.x -16, player.y  -24, 7)
+     print ("score: " ..player.score, player.x - 16, player.y - 24, 7)
      print ("press 's'", player.x -14, player.y  +26, 8)
      return
    end
 	if(started) then 
 --	print ("micro strike", player.x -30, player.y + -30, 14)
 
-	print (player.score, player.x +12, player.y  -31, 7)
+	print (player.score, player.x + 12, player.y - 31, 7)
    print ("„ "..player.rockets .. " "..player.bullets, player.x -30, player.y + 25, 13)
    local h= player.health / 100, 0
    local f = player.fuel/ 100
