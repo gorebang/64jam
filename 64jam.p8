@@ -538,7 +538,6 @@ function update_near_ents()
 			add(near_ents, ent)
 		end
 	end
-	printh("ents " .. #ents .. " near ents " .. #near_ents)
 end
 
 function pos_to_tilepos(x, y)
