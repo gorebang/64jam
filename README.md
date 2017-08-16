@@ -5,6 +5,10 @@
 ## Versions
 We're using sematic versioning - http://semver.org/
 
+### 0.0.16
+* collision performance improvement
+* score position tweak
+* more directions for random tanks
 ### 0.0.15
 * buildings return to map on reset
 ### 0.0.14
