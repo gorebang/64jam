@@ -5,6 +5,8 @@
 ## Versions
 We're using sematic versioning - http://semver.org/
 
+### 0.0.15
+* buildings return to map on reset
 ### 0.0.14
 * dynamic building enting
 * ring buffer for buildings
