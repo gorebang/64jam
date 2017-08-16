@@ -59,6 +59,7 @@ max_buildings = 10  -- old buildings are removed if more than 10 are spawned, th
 map_patch = {} -- ents to return to the map on a reset
 
 started = false
+nearby_ents = {}
 
 
 
@@ -520,8 +521,21 @@ function _update()
 		if btn(0,1) then respawn() end
 	end
 
+	update_near_ents()
 	update_projectiles()
 
+end
+
+-- ents that are near enough to the player to be worth checking for collisions
+function update_near_ents()
+	near_enough = 10
+	near_ents = {}
+	for k,ent in pairs(ents) do
+		if (dist8(player, ent) < near_enough) then
+			add(near_ents, ent)
+		end
+	end
+	printh("ents " .. #ents .. " near ents " .. #near_ents)
 end
 
 function pos_to_tilepos(x, y)
@@ -646,7 +660,7 @@ end
 
 -- check projectiles running into ents
 function collision_check(r)
-	for e in all(ents) do
+	for e in all(near_ents) do
 		if one_collision_check(r, e, collide) then
 			return
 		end
